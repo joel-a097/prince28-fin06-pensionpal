@@ -24,6 +24,7 @@ def test_readiness_check():
         "application": "PensionPal",
     }
 
+
 def test_request_id_header():
     response = client.get("/health")
 
