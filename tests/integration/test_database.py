@@ -15,14 +15,20 @@ from pensionpal.db.session import make_engine, make_sessionmaker
 
 ROWS = [
     {
-        "id": "001",
+        "id": "INT-001",
         "title": "Alpha",
         "kind": "circular",
         "year": 2024,
         "tags": ["a", "b"],
     },
-    {"id": "002", "title": "Beta", "kind": "guideline", "year": 2025, "tags": ["b"]},
-    {"id": "003", "title": "Gamma", "kind": "circular", "year": 2025, "tags": []},
+    {
+        "id": "INT-002",
+        "title": "Beta",
+        "kind": "guideline",
+        "year": 2025,
+        "tags": ["b"],
+    },
+    {"id": "INT-003", "title": "Gamma", "kind": "circular", "year": 2025, "tags": []},
 ]
 
 
@@ -34,16 +40,19 @@ def settings(database_url):
 @pytest.fixture
 async def seeded(settings):
     """Fresh rows for each test: delete, insert, and hand back the settings."""
+    import hashlib
+
     engine = make_engine(settings)
     async with make_sessionmaker(engine)() as session, session.begin():
         await session.execute(text("DELETE FROM documents"))
         for r in ROWS:
             meta = {k: v for k, v in r.items() if k not in ("id", "title")}
+            sha = hashlib.sha256(r["id"].encode()).hexdigest()
             session.add(
                 Document(
                     external_id=r["id"],
                     title=r["title"],
-                    sha256=r["id"] * 21,
+                    sha256=sha,
                     metadata_=meta,
                 )
             )
@@ -71,10 +80,10 @@ async def test_migrations_created_the_tables(settings):
 @pytest.mark.parametrize(
     ("filters", "expected"),
     [
-        ({"kind": "circular"}, ["001", "003"]),
-        ({"year": "2025"}, ["002", "003"]),
-        ({"tags": "b"}, ["001", "002"]),
-        ({"kind": "circular", "year": "2025"}, ["003"]),
+        ({"kind": "circular"}, ["INT-001", "INT-003"]),
+        ({"year": "2025"}, ["INT-002", "INT-003"]),
+        ({"tags": "b"}, ["INT-001", "INT-002"]),
+        ({"kind": "circular", "year": "2025"}, ["INT-003"]),
     ],
 )
 async def test_repository_filters(seeded, filters, expected):
@@ -91,7 +100,7 @@ async def test_repository_filters(seeded, filters, expected):
 def test_api_against_real_database(seeded):
     with TestClient(create_app(seeded)) as client:
         assert client.get("/ready").json()["checks"]["database"] is True
-        assert client.get("/v1/documents/002").json()["title"] == "Beta"
+        assert client.get("/v1/documents/INT-002").json()["title"] == "Beta"
         assert client.get("/v1/documents", params={"q": "gamm"}).json()["total"] == 1
 
 
