@@ -59,3 +59,48 @@ When would it switch to the GIN index? (1 line)
 
 The planner uses the Bitmap Index Scan on ix_documents_metadata_gin once the
 table is large enough that filtering first is cheaper than a full scan.
+
+## D04 · Docker, Compose and tests
+
+### The image
+
+```text
+paste the output of: docker images pensionpal:dev
+paste the output of: docker run --rm pensionpal:dev id
+```
+
+- Size: ___ MB (target: under 400 MB)
+- First build: ___ s. After changing one line of code: ___ s.
+- Which step said CACHED, and why? (1 line, your own words)
+
+### The stack
+
+```text
+paste the output of: docker compose ps -a
+paste the last line of: docker compose logs migrate   (first up, then after down + up)
+```
+
+### Breaking the database on purpose
+
+```text
+db stopped:  /health → paste
+db stopped:  /ready  → paste
+db started:  /ready  → paste
+```
+
+Why should a load balancer stop sending traffic here but not restart the app? (2 lines)
+
+The app itself is healthy; only the database connection is gone. Restarting the
+app would not fix a database outage, and would cause unnecessary downtime for
+requests that do not touch the database.
+
+### Tests and coverage
+
+```text
+uv run poe test              → paste the last line
+uv run poe test-integration  → paste the last line
+coverage TOTAL, unit only    → paste
+coverage TOTAL, with integration tests → paste
+```
+
+Two files or lines my coverage report says are never run, and whether they matter: (2 lines)
