@@ -59,3 +59,61 @@ When would it switch to the GIN index? (1 line)
 
 The planner uses the Bitmap Index Scan on ix_documents_metadata_gin once the
 table is large enough that filtering first is cheaper than a full scan.
+
+## D04 · Docker, Compose and tests
+
+### The image
+
+```text
+IMAGE            ID             DISK USAGE   CONTENT SIZE
+pensionpal:dev   4c65767d4001        211MB             0B
+
+uid=999(app) gid=999(app) groups=999(app)
+```
+
+- Size: 211 MB (target: under 400 MB) ✅
+- First build: ~90 s. After changing one line of code: ~1.3 s.
+- Which step said CACHED, and why? The `uv sync --locked --no-install-project` step was cached because `pyproject.toml` and `uv.lock` had not changed — only source code changed, so the dependency layer was reused.
+
+### The stack
+
+```text
+NAME                   IMAGE                    STATUS
+pensionpal-api-1       pensionpal-api           Up (healthy)   0.0.0.0:8000->8000/tcp
+pensionpal-db-1        pgvector/pgvector:pg17   Up (healthy)   0.0.0.0:5433->5432/tcp
+pensionpal-migrate-1   pensionpal-migrate       Exited (0)
+pensionpal-redis-1     redis:7-alpine           Up (healthy)   0.0.0.0:6379->6379/tcp
+
+First up:  records=20 inserted=20 updated=0 unchanged=0
+After down + up: records=20 inserted=0 updated=0 unchanged=20
+```
+
+### Breaking the database on purpose
+
+```text
+db stopped:  /health → {"status":"healthy","application":"PensionPal"}
+db stopped:  /ready  → {"status":"unavailable","checks":{"database":false}}
+db started:  /ready  → {"status":"ready","checks":{"database":true}}
+```
+
+Why should a load balancer stop sending traffic here but not restart the app? (2 lines)
+
+The app itself is healthy; only the database connection is gone. Restarting the
+app would not fix a database outage, and would cause unnecessary downtime for
+requests that do not touch the database.
+
+### Tests and coverage
+
+```text
+uv run poe test              → 16 passed, 1 warning in 0.62s
+uv run poe test-integration  → 7 passed, 1 warning in 4.66s
+coverage TOTAL, unit only    → 76%  (16 passed, 7 skipped)
+coverage TOTAL, with integration tests → 88%  (23 passed)
+```
+
+Two files or lines my coverage report says are never run, and whether they matter: (2 lines)
+
+`pensionpal/core/logging_config.py` — the `RequestIDFilter` path for missing request_id
+is not exercised by unit tests; it matters only in production logging, not for correctness.
+`migrations/env.py` — the offline migration path is never run in tests;
+it only matters when generating SQL scripts without a live database.
