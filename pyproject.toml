@@ -9,8 +9,11 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
     "fastapi>=0.164.0",
     "pydantic-settings>=2.16.3",
+    "sqlalchemy[asyncio]>=2.1.9",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -26,5 +29,16 @@ dev = [
     "httpx>=0.28.1",
     "pre-commit>=4.7.0",
     "pytest>=9.2.0",
+    "pytest-asyncio>=0.26.0",
     "ruff>=0.17.5",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+extend-ignore = ["E402"]

@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+from pensionpal.core.config import settings
 from pensionpal.schemas import EPFORecord
 
-DATA_FILE = Path(__file__).resolve().parents[1] / "data" / "records.json"
+DATA_FILE = Path(settings.data_file)
 
 
 def get_all_records() -> list[EPFORecord]:

@@ -1,16 +1,4 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+# Re-export from the canonical location so existing imports continue to work.
+from pensionpal.config import Settings, get_settings, settings
 
-
-class Settings(BaseSettings):
-    app_name: str = "PensionPal"
-    environment: str = "development"
-    debug: bool = True
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-
-settings = Settings()
+__all__ = ["Settings", "get_settings", "settings"]
