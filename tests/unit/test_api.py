@@ -55,10 +55,23 @@ def _make_client(rows=None, db_up=True):
 # ---------------------------------------------------------------------------
 
 
-def test_health_returns_200(client):
+def test_health_returns_versioned_status(client):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "healthy", "application": "PensionPal"}
+    assert r.json() == {
+        "status": "ok",
+        "app": "pensionpal",
+        "env": "ci",
+        "version": "dev",
+    }
+
+
+def test_health_uses_configured_git_sha():
+    settings = _make_settings()
+    settings.git_sha = "abc123"
+    with TestClient(create_app(settings)) as c:
+        response = c.get("/health")
+    assert response.json()["version"] == "abc123"
 
 
 def test_ready_returns_200_when_db_up(client):

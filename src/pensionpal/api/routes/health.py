@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from pensionpal.api.deps import check_db
@@ -11,8 +11,14 @@ router = APIRouter()
 
 
 @router.get("/health")
-def health_check():
-    return {"status": "healthy", "application": "PensionPal"}
+def health_check(request: Request):
+    settings = request.app.state.settings
+    return {
+        "status": "ok",
+        "app": settings.app_name,
+        "env": settings.app_env,
+        "version": settings.git_sha,
+    }
 
 
 @router.get("/ready")
