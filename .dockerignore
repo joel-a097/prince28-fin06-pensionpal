@@ -1,0 +1,30 @@
+# Version control
+.git
+.gitignore
+
+# Python cache and virtual environment (rebuilt inside the image)
+__pycache__
+*.py[cod]
+.venv
+
+# Tests and coverage (not needed at runtime)
+tests
+.coverage
+htmlcov
+.pytest_cache
+
+# Local environment (secrets must never enter the image)
+.env
+.env.*
+!.env.example
+
+# Editor and OS
+.vscode
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs
+
+# Ruff cache
+.ruff_cache
