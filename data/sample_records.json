@@ -7,7 +7,9 @@
     "topic": "Transfer of PF balance and pension service details",
     "condition": "Filed by a member to transfer EPF accumulations and EPS service details from a previous employer account to the current employer account when changing jobs",
     "form": "Form 13",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-WITHDRAWAL-002",
@@ -17,7 +19,9 @@
     "topic": "Final settlement of PF accumulations",
     "condition": "Filed by a member for final settlement of PF balance on retirement, termination, or after two months of unemployment (EPF Scheme 1952, Para 69)",
     "form": "Form 19",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-PENSION-003",
@@ -27,7 +31,9 @@
     "topic": "Monthly EPS pension claim",
     "condition": "Filed by a member or family to claim monthly pension under the Employees Pension Scheme 1995 on superannuation, early pension, disablement, widow, children, or orphan pension (EPS 1995, Para 12-16)",
     "form": "Form 10D",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-EPS-WITHDRAWAL-004",
@@ -37,7 +43,9 @@
     "topic": "EPS withdrawal benefit or scheme certificate on leaving service",
     "condition": "Filed by a member who has completed less than 10 years of EPS-eligible service and is leaving service, to claim withdrawal benefit or obtain a scheme certificate to preserve service for future pension (EPS 1995, Para 14)",
     "form": "Form 10C",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-ADVANCE-005",
@@ -47,7 +55,9 @@
     "topic": "Non-refundable advance from PF account",
     "condition": "Filed by a member to draw a non-refundable advance from their PF account for specified purposes such as house construction, illness, marriage, or education (EPF Scheme 1952, Para 68)",
     "form": "Form 31",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-NOMINATION-006",
@@ -57,7 +67,9 @@
     "topic": "Nomination for EPF and EPS",
     "condition": "Filed by a member to declare or update nominees for PF accumulations and EPS pension so that benefits are paid to the named person in the event of the member's death (EPF Scheme 1952, Para 61; EPS 1995, Para 61)",
     "form": "Form 2",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-EDLI-007",
@@ -67,7 +79,9 @@
     "topic": "Insurance benefit claim under EDLI Scheme 1976",
     "condition": "Filed by the nominee or legal heir of a member who died while in service to claim the lump-sum insurance benefit under the Employees Deposit Linked Insurance Scheme 1976 (EDLI 1976, Para 22)",
     "form": "Form 5IF",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-UAN-008",
@@ -77,7 +91,9 @@
     "topic": "Universal Account Number activation and KYC seeding",
     "condition": "A member must activate their UAN on the EPFO Member Portal and seed Aadhaar, PAN, and bank account details to enable online claim submission and passbook access (EPFO circular on UAN)",
     "form": "Online – UAN Member Portal",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://unifiedportal-mem.epfindia.gov.in/memberinterface/",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-JOINT-DECL-009",
@@ -87,7 +103,9 @@
     "topic": "Correction of member profile details",
     "condition": "Filed jointly by the member and employer to correct name, date of birth, father's name, date of joining, or date of leaving in EPFO records when an error exists (EPFO Member Profile Correction procedure)",
     "form": "Joint Declaration",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-EPF-SCHEME-010",
@@ -97,7 +115,9 @@
     "topic": "Employees Provident Fund Scheme 1952",
     "condition": "Governs contributions, accounts, advances, withdrawals, and nominations for the EPF. Applies to establishments with 20 or more employees notified under the EPF and MP Act 1952 (EPF Scheme 1952)",
     "form": "Not applicable",
-    "effective_from": "1952-11-01"
+    "effective_from": "1952-11-01",
+    "source_url": "https://www.epfindia.gov.in/site_en/ActsRules.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-EPS-SCHEME-011",
@@ -107,7 +127,9 @@
     "topic": "Employees Pension Scheme 1995",
     "condition": "Governs pension eligibility, calculation, and claim procedures. A member earns pension eligibility after completing 10 years of contributory service and reaching age 58 (EPS 1995, Para 10, 12)",
     "form": "Not applicable",
-    "effective_from": "1995-11-16"
+    "effective_from": "1995-11-16",
+    "source_url": "https://www.epfindia.gov.in/site_en/ActsRules.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-EDLI-SCHEME-012",
@@ -117,7 +139,9 @@
     "topic": "Employees Deposit Linked Insurance Scheme 1976",
     "condition": "Provides a lump-sum life insurance benefit to the nominee of a member who dies while in employment. The benefit is based on the PF balance with a minimum of Rs 2.5 lakh and a maximum of Rs 7 lakh (EDLI Scheme 1976, Para 22, as amended by EPFO circular dated 28 April 2021)",
     "form": "Not applicable",
-    "effective_from": "1976-08-28"
+    "effective_from": "1976-08-28",
+    "source_url": "https://www.epfindia.gov.in/site_en/ActsRules.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-PENSION-ELIGIBILITY-013",
@@ -127,7 +151,9 @@
     "topic": "EPS pension eligibility conditions",
     "condition": "A member is eligible for monthly EPS pension if they have completed at least 10 years of contributory service and have reached age 58. Early pension is available from age 50 at a reduced rate. A member with less than 10 years of service may claim a withdrawal benefit or scheme certificate (EPS 1995, Para 10, 12, 14)",
     "form": "Form 10D for monthly pension; Form 10C for withdrawal benefit or scheme certificate",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/FAQ_Pension.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-GRIEVANCE-014",
@@ -137,7 +163,9 @@
     "topic": "Raising a grievance for delayed PF transfer or claim",
     "condition": "A member or employer can register a grievance on the EPFO Grievance Management System (EPFiGMS) at epfigms.gov.in if a PF transfer or claim is delayed or rejected. Grievances are assigned to the concerned regional office for resolution (EPFO Grievance circular)",
     "form": "Online – EPFiGMS portal",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://epfigms.gov.in/",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-WITHDRAWAL-PARTIAL-015",
@@ -147,7 +175,9 @@
     "topic": "PF advance for purchase or construction of a house",
     "condition": "A member with at least 5 years of contributory service may withdraw up to 90% of PF accumulations for purchase or construction of a house. The member must not already own a house under the scheme (EPF Scheme 1952, Para 68B)",
     "form": "Form 31",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-WITHDRAWAL-ILLNESS-016",
@@ -157,7 +187,9 @@
     "topic": "PF advance for treatment of illness",
     "condition": "A member may draw up to 6 months of wages or the member's share with interest, whichever is less, for hospitalisation lasting more than 1 month or for major surgical operation (EPF Scheme 1952, Para 68J)",
     "form": "Form 31",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-WITHDRAWAL-MARRIAGE-017",
@@ -167,7 +199,9 @@
     "topic": "PF advance for marriage or higher education",
     "condition": "A member with at least 7 years of membership may withdraw up to 50% of the member's own share with interest for marriage of self, sibling, or child, or for post-matriculation education of self or child (EPF Scheme 1952, Para 68K)",
     "form": "Form 31",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/For_Employees.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-PENSION-FORMULA-018",
@@ -177,7 +211,9 @@
     "topic": "EPS monthly pension calculation formula",
     "condition": "Monthly EPS pension = (Pensionable Salary × Pensionable Service) ÷ 70. Pensionable salary is the average monthly PF wages in the last 60 months before exit, capped at Rs 15,000 unless the member opted for higher wages under the Supreme Court order. Pensionable service includes a 2-year bonus for service of 20 years or more (EPS 1995, Para 11)",
     "form": "Not applicable – informational",
-    "effective_from": "1995-11-16"
+    "effective_from": "1995-11-16",
+    "source_url": "https://www.epfindia.gov.in/site_en/FAQ_Pension.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-CONTRIBUTION-019",
@@ -187,7 +223,9 @@
     "topic": "EPF contribution rates for employer and employee",
     "condition": "An employee contributes 12% of basic wages plus dearness allowance to EPF. The employer contributes a matching 12%: 3.67% goes to EPF and 8.33% goes to EPS (subject to the wage ceiling of Rs 15,000). The employer also pays 0.5% to EDLI and 0.50% administrative charge to EPF (EPF and MP Act 1952, Section 6; EPF Scheme 1952, Para 29)",
     "form": "Not applicable – informational",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://www.epfindia.gov.in/site_en/FAQ_EPF.php",
+    "licence": "Public EPFO document"
   },
   {
     "id": "EPFO-PASSBOOK-020",
@@ -197,6 +235,8 @@
     "topic": "Checking EPF account balance and service history via UAN passbook",
     "condition": "A member with an activated UAN and KYC-seeded account can view their EPF passbook, showing employer-wise contributions and balance, on the EPFO Member Portal at passbook.epfindia.gov.in. This is the official method for checking PF balance and service history (EPFO Member Services)",
     "form": "Online – passbook.epfindia.gov.in",
-    "effective_from": null
+    "effective_from": null,
+    "source_url": "https://passbook.epfindia.gov.in/",
+    "licence": "Public EPFO document"
   }
 ]
