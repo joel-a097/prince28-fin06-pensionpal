@@ -30,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    app.state.settings = cfg
 
     app.add_middleware(RequestIDMiddleware)
     app.add_exception_handler(404, not_found_handler)

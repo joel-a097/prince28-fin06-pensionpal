@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     data_file: Path = Path("data/sample_records.json")
     database_url: str = "postgresql://localhost:5432/pensionpal"
+    # CI embeds the source commit in each image; local runs identify as dev.
+    git_sha: str = "dev"
 
     model_config = SettingsConfigDict(
         env_file=".env",
