@@ -115,59 +115,45 @@ coverage TOTAL, with integration tests → 88%  (23 passed)
 
 ## D05 · CI/CD and going live
 
-Deployment automation is prepared in `.github/workflows/ci.yml` and `.github/workflows/cd.yml`. The CI workflow checks lint, tests against Postgres, and builds a SHA-tagged image. CD migrates the database, asks Render to deploy that image, and smoke-tests `/health`, `/ready`, and `/v1/documents`.
+- Live URL: https://pensionpal.onrender.com
+- CI run for pull request 1: https://github.com/joel-a097/prince28-fin06-pensionpal/actions/runs/44768134896
+- First automatic deploy: https://github.com/joel-a097/prince28-fin06-pensionpal/actions/runs/45341277176
+- PR #11 merged at 12:01:43 IST → “Smoke test passed” at 12:03:53 IST → lead time: 2 min 10 sec.
 
-### Pending live deployment tasks
+### Smoke test output from the automatic CD run
 
-The following require account setup and are intentionally left for the live deployment session:
-
-- Live URL: pending Render service creation
-- CI run for pull request 1: pending GitHub Actions run
-- First automatic deploy: pending Render deployment configuration
-- Uptime monitor and public live/uptime badges: pending live URL and monitor
-- Rollback drill and lead times: pending successful deployment
-
-### Deployment configuration
-
-The CD workflow uses the following GitHub Actions settings:
-
-- `DATABASE_URL` — protected Actions setting.
-- `RENDER_DEPLOY_HOOK` — protected Actions setting.
-- `LIVE_URL` — repository variable.
-
-Configure the Neon connection string in the Render service environment.
-
-Keep all actual credentials outside the Git repository and container image.### Deployment verification
-
-Pending completion:
-
-- [ ] CI checks pass on the CI pull request.
-- [ ] CI checks pass on the CD pull request.
-- [ ] Docker image is published to GHCR.
-- [ ] GHCR package visibility is public.
-- [ ] Main branch protection is enabled.
-- [ ] Render service is deployed successfully.
-- [ ] `/health` returns a successful response.
-- [ ] `/ready` returns a successful response.
-- [ ] Automatic CD deployment succeeds.
-- [ ] Smoke tests pass.
-- [ ] UptimeRobot monitors `/health` every five minutes.
-- [ ] README contains live and uptime badges.
-- [ ] Rollback drill is completed.
-- [ ] `week-1` release tag is pushed.
-
-### Deployment and rollback timings
-
-- Initial deployment time: pending measurement.
-- Rollback deployment time: pending measurement.
-- Latest image redeployment time: pending measurement.
+```text
+ok   /health -> 200, version 79b1db4e2682e2f1db485f9c3c55d39df072ec80
+ok   /ready -> 200 {'status': 'ready', 'checks': {'database': True}}
+ok   /v1/documents?limit=1 -> 200
+Smoke test passed
+```
 
 ### Rollback drill
 
-1. Select an older SHA-tagged Docker image.
-2. Deploy the older image to Render.
-3. Run smoke tests against `/health` and `/ready`.
-4. Confirm the older deployment works.
-5. Redeploy the newest SHA-tagged image.
-6. Run smoke tests again.
-7. Record deployment and rollback timings here.
+- Rolled back to `f40795df1bf0f30e9454a2d65d7868b95d5642e8`: started 12:04:47 IST, smoke passed 12:05:37 IST (50 sec). [Run](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/runs/45341502171)
+- Rolled forward to `79b1db4e2682e2f1db485f9c3c55d39df072ec80`: started 12:06:13 IST, smoke passed 12:07:00 IST (47 sec). [Run](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/runs/45341678219)
+- The rollback changed only the application image; no migrations were added after the older image. The existing database schema remained compatible, and the rollback workflow skipped migrations.
+
+### Where the secrets live
+
+- Neon string: GitHub Actions secret `DATABASE_URL` and Render environment; never in Git or the image.
+- Render deploy hook: GitHub Actions secret `RENDER_DEPLOY_HOOK` only.
+- Live URL: repository variable `LIVE_URL`.
+
+### Monitoring
+
+- `/health` and `/ready` both returned 200 after deployment; `/ready` reported the database connected.
+- UptimeRobot five-minute monitoring and its monitor-specific badge key are still pending account access. Add its badge here after creating the monitor.
+- A warm service avoids the roughly minute-long cold start on the first request after inactivity.
+
+### Deployment verification
+
+- [x] CI checks pass on the CI and CD pull requests.
+- [x] Image published to GHCR and available to Render.
+- [x] Main is the default branch and protected by required CI checks.
+- [x] Render service is live; `/health` and `/ready` return 200.
+- [x] Automatic CD deployed the merged SHA, migrated the database, and passed its smoke test.
+- [x] Rollback and roll-forward completed successfully.
+- [ ] UptimeRobot checks `/health` every five minutes; uptime badge added to README.
+- [ ] `week-1` tag pushed after these notes are merged.
