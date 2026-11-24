@@ -144,7 +144,7 @@ Smoke test passed
 ### Monitoring
 
 - `/health` and `/ready` both returned 200 after deployment; `/ready` reported the database connected.
-- UptimeRobot five-minute monitoring and its monitor-specific badge key are still pending account access. Add its badge here after creating the monitor.
+- UptimeRobot monitors `https://pensionpal.onrender.com/health` every five minutes; the README has its monitor-specific uptime badge.
 - A warm service avoids the roughly minute-long cold start on the first request after inactivity.
 
 ### Deployment verification
@@ -155,5 +155,5 @@ Smoke test passed
 - [x] Render service is live; `/health` and `/ready` return 200.
 - [x] Automatic CD deployed the merged SHA, migrated the database, and passed its smoke test.
 - [x] Rollback and roll-forward completed successfully.
-- [ ] UptimeRobot checks `/health` every five minutes; uptime badge added to README.
+- [x] UptimeRobot checks `/health` every five minutes; uptime badge added to README.
 - [x] `week-1` tag pushed for the live Week 1 release.
