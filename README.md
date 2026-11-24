@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/workflows/ci.yml/badge.svg)](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/workflows/ci.yml)
 [![Live](https://img.shields.io/website?url=https%3A%2F%2Fpensionpal.onrender.com%2Fhealth&label=live)](https://pensionpal.onrender.com/docs)
+[![Uptime (30 days)](https://img.shields.io/uptimerobot/ratio/m804788735-8d5ee678cf0027320218fdc2)](https://pensionpal.onrender.com/health)
 
 Answers provident fund and pension questions for workers: withdrawals, transfers, EPS pension eligibility and claim forms, citing EPFO rules and circulars.
 
