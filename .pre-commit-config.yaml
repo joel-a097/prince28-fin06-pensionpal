@@ -7,6 +7,10 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-json
+      - id: check-added-large-files
+        args: [--maxkb=500]
+        # The append-only manifest may grow with one provenance record per source.
+        exclude: ^data/manifest\.jsonl$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.5
@@ -20,4 +24,5 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
-        exclude: migrations/versions
+        # SHA-256 provenance digests in the manifest are not credentials.
+        exclude: ^(migrations/versions|data/manifest\.jsonl)$

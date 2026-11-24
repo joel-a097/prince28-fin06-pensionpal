@@ -1,5 +1,14 @@
 # Engineering notes: PensionPal
 
+## D06 · Corpus collection
+
+- Scope: primary EPFO materials for EPF/EPS/EDLI rules, member FAQs, transfer and claim forms, and claim guidance. The 1,000-page full corpus is a planning target; the tracked source list is a starter sample.
+- Acquisition: `uv run python scripts/fetch.py urls` checks `robots.txt`, uses a descriptive user agent, paces requests per host, limits concurrency, retries transient errors, streams into temporary files, hashes completed files, and resumes from `data/manifest.jsonl`.
+- Provenance and reuse: each source row records its publisher, URL, title, and terms. No general open reuse licence was located for EPFO; keep raw files local, cite and link them, and do not redistribute full text. `data/raw/` is ignored by Git; provenance records are tracked.
+- Live collection attempt: 10 URLs checked; 0 downloaded, 10 blocked because the downloader could not retrieve robots policy from this execution environment. It fails closed when robots cannot be checked. The attempt is recorded in `data/manifest.jsonl`; rerun the command from a network that can reach EPFO to resume.
+- Validation: the offline downloader suite covers retry/backoff, robots policy, host pacing, atomic partial-file cleanup, manifest resume, and redirect checks. The actual source files, extraction measurements, corpus totals, and meaningful capacity estimate remain pending a successful source download.
+- Capacity model: `uv run python scripts/dataset_report.py` extracts PDF/text characters, estimates tokens as characters / 4, estimates 500-token chunks and 1,024-dimensional float32 vectors, and calculates embedding cost using the configurable price and exchange rate. These are planning estimates, not tokenizer or vendor quotes.
+
 ## D03 · PostgreSQL
 
 ### Migrations (upgrade, downgrade, upgrade)
