@@ -1,15 +1,14 @@
-# PensionPal start corpus: official EPFO transfer, claims, and pension documents.
-# Scope: primary rules plus member-facing forms/guidance for the six Week 1 questions.
-# EPFO robots.txt on www.epfo.gov.in: User-agent: *; Disallow: (no paths blocked).
-# Site reuse terms: no general open reuse grant located; retain provenance and do not reproduce full text.
+# PensionPal corpus: current public EPFO rules and member help documents.
+# Source links were refreshed against EPFO's public site after Day 06 URLs returned 404.
+# Check robots.txt before access. No general open reuse grant located; retain attribution; do not redistribute full text.
 url,source,licence,title
-https://www.epfindia.gov.in/site_docs/PDFs/Downloads_PDFs/EPFScheme.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees' Provident Funds Scheme 1952
-https://www.epfindia.gov.in/site_docs/PDFs/Circulars/Y2010-2011/EPS95_update.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees' Pension Scheme 1995
-https://www.epfindia.gov.in/site_docs/PDFs/Downloads_PDFs/EDLI_Scheme.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees Deposit Linked Insurance Scheme 1976
-https://www.epfindia.gov.in/site_docs/PDFs/Downloads_PDFs/Form13.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Transfer Claim Form 13
-https://www.epfindia.gov.in/site_docs/PDFs/Downloads_PDFs/Form10C.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPS Form 10C
-https://www.epfindia.gov.in/site_docs/PDFs/Downloads_PDFs/Form19_instructions_Eng.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Form 19 final settlement instructions
-https://www.epfindia.gov.in/site_docs/PDFs/OTCP_PDFs/ImportantGuidelinesformember.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Important guidelines for EPF members
-https://www.epfindia.gov.in/site_docs/PDFs/UAN_PDFs/UAN_ForMembers/FAQ-Member-Ver1.1.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",UAN member FAQ
-https://www.epfindia.gov.in/site_docs/PDFs/Circulars/Y2017-2018/Manual_SOP_ClaimSettlement_10800.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Standard operating procedure for claim settlement
-https://www.epfindia.gov.in/site_docs/PDFs/EPFO_Rules-Regulations_PDFs/MAP_PartI/MAP_PartI_Ch15.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Manual chapter 15 public grievances handling system
+https://www.epfo.gov.in/employees-provident-funds-scheme/,epfo,"Public EPFO web document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees' Provident Funds Scheme 1952
+https://www.epfo.gov.in/eps-scheme/,epfo,"Public EPFO web document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees' Pension Scheme 1995
+https://www.epfo.gov.in/edli-scheme/,epfo,"Public EPFO web document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Employees Deposit Linked Insurance Scheme 1976
+https://www.epfo.gov.in/faq-epfo/,epfo,"Public EPFO web document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPFO frequently asked questions
+https://www.epfo.gov.in/wp-content/themes/epfo-child/assets/pdfs/ContributionRate.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPF contribution rates
+https://www.epfo.gov.in/wp-content/themes/epfo-child/assets/pdfs/WageCeiling.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPF wage ceiling
+https://www.epfo.gov.in/wp-content/themes/epfo-child/assets/pdfs/InterestRate_OnPFAccumulationsSince1952.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Interest rate on PF accumulations since 1952
+https://www.epfo.gov.in/wp-content/uploads/2025/11/CitizenCharter.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPFO Citizen's Charter
+https://pmvbry-cdn.epfindia.gov.in/wp-content/uploads/2025/11/faq_transfer_claim.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",Transfer claim FAQ
+https://pmvbry-cdn.epfindia.gov.in/wp-content/uploads/2025/08/Annual_Report_2023-24.pdf,epfo,"Public EPFO document; no open reuse licence located; local research copy, cite and link source; no full-text republication.",EPFO annual report 2023-24
