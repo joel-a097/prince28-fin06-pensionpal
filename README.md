@@ -5,7 +5,7 @@
 
 Answers provident fund and pension questions for workers: withdrawals, transfers, EPS pension eligibility and claim forms, citing EPFO rules and circulars.
 
-**Status:** Week 1 deployment workflow prepared; live service and uptime monitor pending account setup. Intended URL: https://pensionpal.onrender.com.
+**Status:** Week 1 is deployed at https://pensionpal.onrender.com; UptimeRobot monitoring still needs account setup.
 
 **Live:** https://pensionpal.onrender.com · [API docs](https://pensionpal.onrender.com/docs) · [health](https://pensionpal.onrender.com/health)
 
