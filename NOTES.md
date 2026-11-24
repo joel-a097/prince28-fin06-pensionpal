@@ -156,4 +156,4 @@ Smoke test passed
 - [x] Automatic CD deployed the merged SHA, migrated the database, and passed its smoke test.
 - [x] Rollback and roll-forward completed successfully.
 - [ ] UptimeRobot checks `/health` every five minutes; uptime badge added to README.
-- [ ] `week-1` tag pushed after these notes are merged.
+- [x] `week-1` tag pushed for the live Week 1 release.
