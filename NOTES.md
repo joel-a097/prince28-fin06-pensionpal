@@ -50,15 +50,13 @@ Planning Time: 0.089 ms
 Execution Time: 0.146 ms
 ```
 
-Why did the planner choose a Seq Scan on my table? (2 lines, your own words)
+**Why did the planner choose a Seq Scan on my table? (2 lines, your own words)**
 
-With only 20 rows the entire table fits in 2 shared buffer pages, so reading
-everything in one pass costs less than the overhead of an index lookup.
+With only 20 rows the entire table fits in 2 shared buffer pages, so reading everything in one pass costs less than the overhead of an index lookup.
 
-When would it switch to the GIN index? (1 line)
+**When would it switch to the GIN index? (1 line)**
 
-The planner uses the Bitmap Index Scan on ix_documents_metadata_gin once the
-table is large enough that filtering first is cheaper than a full scan.
+The planner uses the Bitmap Index Scan on ix_documents_metadata_gin once the table is large enough that filtering first is cheaper than a full scan.
 
 ## D04 · Docker, Compose and tests
 
@@ -72,7 +70,7 @@ uid=999(app) gid=999(app) groups=999(app)
 ```
 
 - Size: 211 MB (target: under 400 MB) ✅
-- First build: ~90 s. After changing one line of code: ~1.3 s.
+- First build: \~90 s. After changing one line of code: \~1.3 s.
 - Which step said CACHED, and why? The `uv sync --locked --no-install-project` step was cached because `pyproject.toml` and `uv.lock` had not changed — only source code changed, so the dependency layer was reused.
 
 ### The stack
@@ -96,11 +94,9 @@ db stopped:  /ready  → {"status":"unavailable","checks":{"database":false}}
 db started:  /ready  → {"status":"ready","checks":{"database":true}}
 ```
 
-Why should a load balancer stop sending traffic here but not restart the app? (2 lines)
+**Why should a load balancer stop sending traffic here but not restart the app? (2 lines)**
 
-The app itself is healthy; only the database connection is gone. Restarting the
-app would not fix a database outage, and would cause unnecessary downtime for
-requests that do not touch the database.
+The app itself is healthy; only the database connection is gone. Restarting the app would not fix a database outage, and would cause unnecessary downtime for requests that do not touch the database.
 
 ### Tests and coverage
 
@@ -111,9 +107,67 @@ coverage TOTAL, unit only    → 76%  (16 passed, 7 skipped)
 coverage TOTAL, with integration tests → 88%  (23 passed)
 ```
 
-Two files or lines my coverage report says are never run, and whether they matter: (2 lines)
+**Two files or lines my coverage report says are never run, and whether they matter: (2 lines)**
 
-`pensionpal/core/logging_config.py` — the `RequestIDFilter` path for missing request_id
-is not exercised by unit tests; it matters only in production logging, not for correctness.
-`migrations/env.py` — the offline migration path is never run in tests;
-it only matters when generating SQL scripts without a live database.
+`pensionpal/core/logging_config.py` — the `RequestIDFilter` path for missing request_id is not exercised by unit tests; it matters only in production logging, not for correctness.
+
+`migrations/env.py` — the offline migration path is never run in tests; it only matters when generating SQL scripts without a live database.
+
+## D05 · CI/CD and going live
+
+Deployment automation is prepared in `.github/workflows/ci.yml` and `.github/workflows/cd.yml`. The CI workflow checks lint, tests against Postgres, and builds a SHA-tagged image. CD migrates the database, asks Render to deploy that image, and smoke-tests `/health`, `/ready`, and `/v1/documents`.
+
+### Pending live deployment tasks
+
+The following require account setup and are intentionally left for the live deployment session:
+
+- Live URL: pending Render service creation
+- CI run for pull request 1: pending GitHub Actions run
+- First automatic deploy: pending Render deployment configuration
+- Uptime monitor and public live/uptime badges: pending live URL and monitor
+- Rollback drill and lead times: pending successful deployment
+
+### Deployment configuration
+
+The CD workflow uses the following GitHub Actions settings:
+
+- `DATABASE_URL` — protected Actions setting.
+- `RENDER_DEPLOY_HOOK` — protected Actions setting.
+- `LIVE_URL` — repository variable.
+
+Configure the Neon connection string in the Render service environment.
+
+Keep all actual credentials outside the Git repository and container image.### Deployment verification
+
+Pending completion:
+
+- [ ] CI checks pass on the CI pull request.
+- [ ] CI checks pass on the CD pull request.
+- [ ] Docker image is published to GHCR.
+- [ ] GHCR package visibility is public.
+- [ ] Main branch protection is enabled.
+- [ ] Render service is deployed successfully.
+- [ ] `/health` returns a successful response.
+- [ ] `/ready` returns a successful response.
+- [ ] Automatic CD deployment succeeds.
+- [ ] Smoke tests pass.
+- [ ] UptimeRobot monitors `/health` every five minutes.
+- [ ] README contains live and uptime badges.
+- [ ] Rollback drill is completed.
+- [ ] `week-1` release tag is pushed.
+
+### Deployment and rollback timings
+
+- Initial deployment time: pending measurement.
+- Rollback deployment time: pending measurement.
+- Latest image redeployment time: pending measurement.
+
+### Rollback drill
+
+1. Select an older SHA-tagged Docker image.
+2. Deploy the older image to Render.
+3. Run smoke tests against `/health` and `/ready`.
+4. Confirm the older deployment works.
+5. Redeploy the newest SHA-tagged image.
+6. Run smoke tests again.
+7. Record deployment and rollback timings here.

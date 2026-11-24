@@ -1,8 +1,10 @@
 # PensionPal
 
+[![CI](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/workflows/ci.yml/badge.svg)](https://github.com/joel-a097/prince28-fin06-pensionpal/actions/workflows/ci.yml)
+
 Answers provident fund and pension questions for workers: withdrawals, transfers, EPS pension eligibility and claim forms, citing EPFO rules and circulars.
 
-**Status:** Day 1 foundation (FastAPI skeleton, quality gates). Live URL from Day 5.
+**Status:** Day 5 deployment workflow prepared; public deployment URL pending Render setup.
 
 ## Who it's for
 
@@ -37,6 +39,7 @@ Correct form and rule for 90%+ of 40 member scenarios.
 ```bash
 uv sync
 copy .env.example .env
+```
 
 ## Run locally in one command
 
