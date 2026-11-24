@@ -198,7 +198,7 @@ def generated_capacity(
             f"| Tokens per page | {tokens_per_page:,.0f} | based on measured sample |",
             f"| Chunks at {chunk_tokens:,} tokens | {math.ceil(tokens / chunk_tokens) if tokens else 0:,} | {chunks:,} |",
             f"| Embedding estimate at ${embed_usd:g}/million tokens | n/a | INR {embed_cost_inr:,.2f} (USD/INR {usd_inr:g}) |",
-            f"| Raw float32 vectors at {dims} dimensions | — | {vector_mib:,.2f} MiB |",
+            f"| Raw float32 vectors at {dims} dimensions | n/a | {vector_mib:,.2f} MiB |",
             "",
             f"Full target input: **{assumption}**. Token count is an estimate from extracted characters, not tokenizer output. Vector storage excludes database indexes, row metadata, and text chunks.",
             "",

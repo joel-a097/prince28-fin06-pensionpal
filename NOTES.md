@@ -1,14 +1,44 @@
-# Engineering notes: PensionPal
+﻿# Engineering notes: PensionPal
 
-## D06 · Corpus collection
-
+## D07 - Parsing my corpus
+- Files in the current source manifest: 10 downloaded; 10 parsed; 0 failed; 429 pages in Postgres.
+- Parsing coverage: 100% of downloaded files (10 / 10).
+### Failures by reason
+| Reason | Files | What I did |
+|---|---:|---|
+| no_text_layer | 1 initial / 0 remaining | Used pypdf fallback; it extracted 404 characters from the wage-ceiling PDF. |
+- The one I fixed: `data/raw/epfo/wageceiling-f1b23c5c.pdf`, reason `no_text_layer`, fix: pypdf extracted its text and the retry cleared the failure row.
+### What I saw when I read my parsed pages
+- A page where the heading path is right (document, page, path): EPF Scheme 1952, page 2, `[EMPLOYEES' PROVIDENT FUNDS SCHEME, 1952, CHAPTER I Preliminary, 1. Short title and application.]`.
+- Something that came out wrong (document, page, what): the contribution rates PDF contains a replacement glyph in "employers' contributions"; this PDF font encoding needs a cleaner source or targeted repair.
+- A table: Markdown grid on EPF contribution rates, page 1; the six-column contribution table is readable as rows and columns.
+### My parser choice
+- For PDFs I use PyMuPDF because it retained heading structure and found 2 tables in the transfer FAQ (pypdf found 0); pypdf recovered text from the wage-ceiling file that PyMuPDF classified as scanned.
+- A kind of document in my corpus that neither parser handles well: dense vector-heavy annual-report tables (table extraction was skipped for speed) and scanned PDFs without OCR.
+### One thing that went wrong today, and how I fixed it
+The Day 06 EPFO URLs had moved and returned 404. I replaced them using links from EPFO's current official pages, checked robots.txt (no paths disallowed), then downloaded the refreshed sources. The annual report made table detection slow; limiting table detection to pages with at most 32 vector drawings cut its parse to about 53 seconds while retaining tables from simpler forms.
+### Parser comparison
+<!-- parser-comparison:start -->
+| File | Type | Parser A (chars/pages/headings/tables/sec) | Parser B (chars/pages/headings/tables/sec) | Verdict |
+|---|---|---|---|---|
+| `data/raw/epfo/annual-report-2023-24-88221eca.pdf` | .pdf | PyMuPDF: 475,516 / 259 / 2750 / 0 / 48.61s | pypdf: 458,516 / 259 / 0 / 0 / 54.10s | PyMuPDF: more structure and faster; dense tables remain a gap |
+| `data/raw/epfo/citizencharter-5075ead5.pdf` | .pdf | PyMuPDF: 7,660 / 10 / 74 / 0 / 0.52s | pypdf: 7,321 / 10 / 0 / 0 / 0.66s | PyMuPDF: slightly more text, headings, and faster |
+| `data/raw/epfo/employees-provident-funds-scheme-445662a2.html` | .html | trafilatura: 225,920 / 85 / 124 / 0 / 0.53s | plain tags: 229,102 / 1 / 0 / 0 / 0.19s | Trafilatura: keeps scheme structure and drops page chrome |
+| `data/raw/epfo/contributionrate-80aa900e.pdf` | .pdf | PyMuPDF: 7,349 / 3 / 2 / 0 / 0.13s | pypdf: 7,311 / 3 / 1 / 0 / 0.83s | PyMuPDF: similar text with headings and much faster |
+| `data/raw/epfo/eps-scheme-e4deea56.html` | .html | trafilatura: 77,317 / 33 / 7 / 0 / 0.77s | plain tags: 71,373 / 1 / 0 / 0 / 0.15s | Trafilatura: preserves pages and section headings |
+| `data/raw/epfo/faq-transfer-claim-f1982656.pdf` | .pdf | PyMuPDF: 10,915 / 9 / 35 / 2 / 0.57s | pypdf: 12,798 / 9 / 0 / 0 / 0.55s | PyMuPDF: pypdf has more characters, but loses the tables and headings |
+| `data/raw/epfo/faq-epfo-5e8668f6.html` | .html | trafilatura: 40,742 / 15 / 141 / 0 / 0.18s | plain tags: 41,748 / 1 / 0 / 0 / 0.05s | Trafilatura: small plain-text surplus is page chrome; structure is retained |
+| `data/raw/epfo/edli-scheme-dc36e942.html` | .html | trafilatura: 30,305 / 11 / 0 / 0 / 0.12s | plain tags: 32,891 / 1 / 0 / 0 / 0.05s | Trafilatura: splits the scheme into pages; headings need tuning |
+| `data/raw/epfo/interestrate-onpfaccumulationssince1952-37bf9df5.pdf` | .pdf | PyMuPDF: 5,666 / 3 / 9 / 0 / 0.10s | pypdf: 5,627 / 3 / 0 / 0 / 0.51s | PyMuPDF: similar text with useful headings and faster |
+| `data/raw/epfo/wageceiling-f1b23c5c.pdf` | .pdf | PyMuPDF: 416 / 1 / 3 / 0 / 0.02s | pypdf: 404 / 1 / 0 / 0 / 0.03s | PyMuPDF default; pypdf fallback fixed its false scan detection |
+<!-- parser-comparison:end -->
+## D06 - Corpus collection
 - Scope: primary EPFO materials for EPF/EPS/EDLI rules, member FAQs, transfer and claim forms, and claim guidance. The 1,000-page full corpus is a planning target; the tracked source list is a starter sample.
 - Acquisition: `uv run python scripts/fetch.py urls` checks `robots.txt`, uses a descriptive user agent, paces requests per host, limits concurrency, retries transient errors, streams into temporary files, hashes completed files, and resumes from `data/manifest.jsonl`.
 - Provenance and reuse: each source row records its publisher, URL, title, and terms. No general open reuse licence was located for EPFO; keep raw files local, cite and link them, and do not redistribute full text. `data/raw/` is ignored by Git; provenance records are tracked.
-- Live collection attempt: 10 URLs checked; 0 downloaded, 10 blocked because the downloader could not retrieve robots policy from this execution environment. It fails closed when robots cannot be checked. The attempt is recorded in `data/manifest.jsonl`; rerun the command from a network that can reach EPFO to resume.
-- Validation: the offline downloader suite covers retry/backoff, robots policy, host pacing, atomic partial-file cleanup, manifest resume, and redirect checks. The actual source files, extraction measurements, corpus totals, and meaningful capacity estimate remain pending a successful source download.
+- Live collection: the original 10 URLs returned 404 and remain as failed historical attempts. The refreshed official EPFO URLs all allow crawling and yielded 10 files (4 HTML pages, 6 PDFs); raw documents stay local and are ignored by Git.
+- Validation: the offline downloader suite covers retry/backoff, robots policy, host pacing, atomic partial-file cleanup, manifest resume, and redirect checks. The refreshed source inventory and capacity estimate are in `DATASET.md` and `docs/CAPACITY.md`.
 - Capacity model: `uv run python scripts/dataset_report.py` extracts PDF/text characters, estimates tokens as characters / 4, estimates 500-token chunks and 1,024-dimensional float32 vectors, and calculates embedding cost using the configurable price and exchange rate. These are planning estimates, not tokenizer or vendor quotes.
-
 ## D03 · PostgreSQL
 
 ### Migrations (upgrade, downgrade, upgrade)
