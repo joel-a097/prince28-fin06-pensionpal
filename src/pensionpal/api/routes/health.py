@@ -10,7 +10,7 @@ from pensionpal.api.deps import check_db
 router = APIRouter()
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health_check(request: Request):
     settings = request.app.state.settings
     return {
