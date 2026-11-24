@@ -14,6 +14,12 @@ __pycache__/
 .env.*
 !.env.example
 
+# Downloaded source files stay local; the provenance manifest is tracked.
+data/raw/
+
+# uv cache for this restricted workspace.
+.uv-cache/
+
 # Editor
 .vscode/
 
