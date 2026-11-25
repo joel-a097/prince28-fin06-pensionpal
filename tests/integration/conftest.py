@@ -16,7 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from pensionpal.config import get_settings
+from pensionpal.config import Settings, get_settings
 from pensionpal.db.url import to_asyncpg_url
 
 BASE_URL = os.getenv("TEST_DATABASE_URL")
@@ -54,3 +54,8 @@ def database_url():
     get_settings.cache_clear()
     patch.undo()
     asyncio.run(_admin(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
+@pytest.fixture
+def settings(database_url):
+    return Settings(app_env="ci", database_url=database_url, _env_file=None)
