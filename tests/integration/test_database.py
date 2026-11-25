@@ -73,7 +73,7 @@ async def test_migrations_created_the_tables(settings):
         )
         version = await conn.scalar(text("SELECT version_num FROM alembic_version"))
     await engine.dispose()
-    assert {"documents", "pages", "alembic_version"} <= tables
+    assert {"documents", "pages", "llm_calls", "alembic_version"} <= tables
     assert version
 
 
