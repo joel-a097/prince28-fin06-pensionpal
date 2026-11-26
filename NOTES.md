@@ -1,12 +1,12 @@
 ﻿# Engineering notes: PensionPal
 
 ## D07 - Parsing my corpus
-- Files in the current source manifest: 10 downloaded; 10 parsed; 0 failed; 429 pages in Postgres.
-- Parsing coverage: 100% of downloaded files (10 / 10).
+- Files in the current source manifest: 110 downloaded; 53 parsed; 57 circular PDFs have no extractable text; 1,027 page rows in Postgres.
+- Parsing coverage: 48% of downloaded files (53 / 110); all 100 new circular files were downloaded successfully.
 ### Failures by reason
 | Reason | Files | What I did |
 |---|---:|---|
-| no_text_layer | 1 initial / 0 remaining | Used pypdf fallback; it extracted 404 characters from the wage-ceiling PDF. |
+| no_text_layer | 57 current circular PDFs; plus 1 historical failure cleared | The downloaded PDFs are image-only or otherwise textless to both current parsers; OCR is not configured. The original wage-ceiling failure was cleared with pypdf. |
 - The one I fixed: `data/raw/epfo/wageceiling-f1b23c5c.pdf`, reason `no_text_layer`, fix: pypdf extracted its text and the retry cleared the failure row.
 ### What I saw when I read my parsed pages
 - A page where the heading path is right (document, page, path): EPF Scheme 1952, page 2, `[EMPLOYEES' PROVIDENT FUNDS SCHEME, 1952, CHAPTER I Preliminary, 1. Short title and application.]`.
@@ -16,7 +16,7 @@
 - For PDFs I use PyMuPDF because it retained heading structure and found 2 tables in the transfer FAQ (pypdf found 0); pypdf recovered text from the wage-ceiling file that PyMuPDF classified as scanned.
 - A kind of document in my corpus that neither parser handles well: dense vector-heavy annual-report tables (table extraction was skipped for speed) and scanned PDFs without OCR.
 ### One thing that went wrong today, and how I fixed it
-The Day 06 EPFO URLs had moved and returned 404. I replaced them using links from EPFO's current official pages, checked robots.txt (no paths disallowed), then downloaded the refreshed sources. The annual report made table detection slow; limiting table detection to pages with at most 32 vector drawings cut its parse to about 53 seconds while retaining tables from simpler forms.
+The Day 06 EPFO URLs had moved and returned 404. I refreshed the sources from EPFO's official pages and added 100 circular PDFs from its official circular index. The fetcher checked robots.txt and downloaded all 100 at one request at a time with a two-second host delay. Fifty-seven PDFs have no extractable text layer, so they remain in the dataset report but are not searchable in Postgres until OCR is configured.
 ### Parser comparison
 <!-- parser-comparison:start -->
 | File | Type | Parser A (chars/pages/headings/tables/sec) | Parser B (chars/pages/headings/tables/sec) | Verdict |
@@ -33,10 +33,10 @@ The Day 06 EPFO URLs had moved and returned 404. I replaced them using links fro
 | `data/raw/epfo/wageceiling-f1b23c5c.pdf` | .pdf | PyMuPDF: 416 / 1 / 3 / 0 / 0.02s | pypdf: 404 / 1 / 0 / 0 / 0.03s | PyMuPDF default; pypdf fallback fixed its false scan detection |
 <!-- parser-comparison:end -->
 ## D06 - Corpus collection
-- Scope: primary EPFO materials for EPF/EPS/EDLI rules, member FAQs, transfer and claim forms, and claim guidance. The 1,000-page full corpus is a planning target; the tracked source list is a starter sample.
+- Scope: primary EPFO materials for EPF/EPS/EDLI rules, member FAQs, transfer and claim forms, and claim guidance. The tracked source list is a 110-document starter sample; the 2,000-page full-corpus target remains a planning estimate.
 - Acquisition: `uv run python scripts/fetch.py urls` checks `robots.txt`, uses a descriptive user agent, paces requests per host, limits concurrency, retries transient errors, streams into temporary files, hashes completed files, and resumes from `data/manifest.jsonl`.
 - Provenance and reuse: each source row records its publisher, URL, title, and terms. No general open reuse licence was located for EPFO; keep raw files local, cite and link them, and do not redistribute full text. `data/raw/` is ignored by Git; provenance records are tracked.
-- Live collection: the original 10 URLs returned 404 and remain as failed historical attempts. The refreshed official EPFO URLs all allow crawling and yielded 10 files (4 HTML pages, 6 PDFs); raw documents stay local and are ignored by Git.
+- Live collection: the original 10 URLs returned 404 and remain as failed historical attempts. The refreshed official EPFO URLs all allow crawling and yielded 110 files (4 HTML pages, 106 PDFs, including 100 circulars); raw documents stay local and are ignored by Git.
 - Validation: the offline downloader suite covers retry/backoff, robots policy, host pacing, atomic partial-file cleanup, manifest resume, and redirect checks. The refreshed source inventory and capacity estimate are in `DATASET.md` and `docs/CAPACITY.md`.
 - Capacity model: `uv run python scripts/dataset_report.py` extracts PDF/text characters, estimates tokens as characters / 4, estimates 500-token chunks and 1,024-dimensional float32 vectors, and calculates embedding cost using the configurable price and exchange rate. These are planning estimates, not tokenizer or vendor quotes.
 ## D03 · PostgreSQL
@@ -196,3 +196,21 @@ Smoke test passed
 - [x] Rollback and roll-forward completed successfully.
 - [x] UptimeRobot checks `/health` every five minutes; uptime badge added to README.
 - [x] `week-1` tag pushed for the live Week 1 release.
+
+
+## D08 - LLM gateway
+
+- Implementation: Gemini is first; Groq is fallback. The OpenAI-compatible HTTP adapter has timeouts, retry/backoff for retryable errors, a per-provider circuit breaker, streaming support, token accounting, and list-price cost estimates in INR. The prompt lives at `prompts/chat_system_v1.md`.
+- API: `POST /v1/chat` streams SSE by default (`{"stream": false}` returns JSON); `GET /v1/usage` reports daily calls, errors, fallbacks, tokens, and cost. Provider attempts are written independently to `llm_calls`, including failed attempts with zero tokens/cost.
+- Database: migration `9108ccd83de1_add_llm_calls` was applied to the configured Neon database; `alembic current` reported `9108ccd83de1 (head)`.
+- Local verification: `pytest tests/unit` -> 91 passed; Ruff check and format checks pass. The local integration test was not run because the Docker engine is unavailable.
+- Real-provider and live checks are pending: neither `GEMINI_API_KEY` nor `GROQ_API_KEY` is configured in this workspace. No provider request, cost, timing, model-answer quality, fallback drill, or Render deployment is claimed. Add the keys directly to local `.env` and Render's private environment settings; never paste them into chat or commit them. Then run `uv run python scripts/llm_ping.py`, start the app, and capture laptop/live timings and the English/Tamil token comparison before completing the interview notes below.
+
+### Measurements to record after real provider calls
+
+- Laptop first response: first words ___ s; total ___ s; input/output tokens ___ / ___; estimated cost Rs ___
+- Live awake request: first words ___ s
+- "Hi" / English sentence / Tamil sentence input tokens: ___ / ___ / ___
+- PF balance question response and one verified mistake: pending real call
+- Broken-primary drill: fallback provider ___; circuit opened after request ___; half-open retry ___
+- `/v1/usage`: calls ___; errors ___; fallbacks ___; total estimated cost Rs ___

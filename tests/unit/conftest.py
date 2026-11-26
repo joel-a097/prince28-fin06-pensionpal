@@ -1,9 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from pensionpal.api.deps import check_db, get_repo
+from pensionpal.api.deps import check_db, get_gateway, get_repo
 from pensionpal.api.main import create_app
 from pensionpal.config import Settings
+from pensionpal.llm.gateway import FakeLLM, LLMGateway
 
 # Tiny fake records: unit tests never touch a real database or your data file.
 SAMPLE = [
@@ -52,5 +53,8 @@ def client(settings, db_state):
     app = create_app(settings)
     app.dependency_overrides[get_repo] = lambda: FakeRepo(SAMPLE)
     app.dependency_overrides[check_db] = lambda: db_state["up"]
+    app.dependency_overrides[get_gateway] = lambda: LLMGateway(
+        [FakeLLM("gemini", "test-model")]
+    )
     with TestClient(app) as c:
         yield c

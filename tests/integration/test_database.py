@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from pensionpal.api.main import create_app
-from pensionpal.config import Settings
 from pensionpal.db.models import Document
 from pensionpal.db.repository import DocumentRepository
 from pensionpal.db.session import make_engine, make_sessionmaker
@@ -30,11 +29,6 @@ ROWS = [
     },
     {"id": "INT-003", "title": "Gamma", "kind": "circular", "year": 2025, "tags": []},
 ]
-
-
-@pytest.fixture
-def settings(database_url):
-    return Settings(app_env="ci", database_url=database_url, _env_file=None)
 
 
 @pytest.fixture
@@ -73,7 +67,7 @@ async def test_migrations_created_the_tables(settings):
         )
         version = await conn.scalar(text("SELECT version_num FROM alembic_version"))
     await engine.dispose()
-    assert {"documents", "pages", "alembic_version"} <= tables
+    assert {"documents", "pages", "llm_calls", "alembic_version"} <= tables
     assert version
 
 

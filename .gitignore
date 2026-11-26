@@ -7,6 +7,7 @@ __pycache__/
 
 # Testing
 .pytest_cache/
+.pytest-tmp-*
 .coverage
 
 # Environment variables and secrets
