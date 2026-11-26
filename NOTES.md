@@ -214,3 +214,16 @@ Smoke test passed
 - PF balance question response and one verified mistake: pending real call
 - Broken-primary drill: fallback provider ___; circuit opened after request ___; half-open retry ___
 - `/v1/usage`: calls ___; errors ___; fallbacks ___; total estimated cost Rs ___
+
+## D09 · Versioned prompts and structured document metadata
+
+- Added `classify_v1` through `classify_v3`, a labeled 20-question PensionPal test set, and `scripts/compare_prompts.py` with a prompt-and-question response cache. Scores and token comparisons are pending real provider calls.
+- Prompt comparison table (written by `scripts/compare_prompts.py`):
+
+<!-- prompt-comparison:start -->
+Pending real provider keys and comparison run.
+<!-- prompt-comparison:end -->
+- Added `DocMeta` for document kind, year, language, summary, topics, scheme names, form references, and section references. Extracted values merge into the existing JSONB metadata column, which `/v1/documents` already filters.
+- Added `scripts/extract_metadata.py` with schema validation, up to three repair attempts, per-document saves, prompt-version idempotency, and `--retry-failed`. No migration is required.
+- Live extraction and prompt measurements are pending: no Gemini or Groq key is configured in this workspace, and no provider calls or Neon writes were made.
+- Local verification: `uv run poe test` -> 111 passed; Ruff check and format checks pass.

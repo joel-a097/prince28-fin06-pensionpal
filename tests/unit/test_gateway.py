@@ -230,6 +230,18 @@ def test_http_error_retry_classification():
     assert not OpenAICompatProvider._error(httpx.Response(401)).retryable
 
 
+def test_openai_compatible_body_can_request_native_json_schema():
+    provider = OpenAICompatProvider("test", "https://example.test/v1", "secret", "m")
+    fmt = {
+        "type": "json_schema",
+        "json_schema": {"name": "DocMeta", "schema": {"type": "object"}},
+    }
+    assert (
+        provider._body(MESSAGES, 0, False, response_format=fmt)["response_format"]
+        == fmt
+    )
+
+
 @pytest.mark.asyncio
 async def test_real_http_adapter_parses_reply_without_external_network():
     def handler(request):
