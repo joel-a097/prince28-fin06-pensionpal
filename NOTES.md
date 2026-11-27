@@ -262,10 +262,11 @@ Smoke test passed
 
 ### Live ingestion
 
-- PR #24 was merged to `main` as `bde0307179694ff20e693ea51d7d4bc7066df06b`; main CI and CD succeeded. Render runs that image, the D10 migration is applied, and `/health` returned 200 with the merged SHA.
-- Render Redis Key Value is provisioned in Singapore. `REDIS_URL`, `WORKER_IN_API`, and `ADMIN_TOKEN` are configured; OCR job timeout is 300 seconds and worker concurrency is 1. `/v1/usage` returned 200 with 213 calls, 11 errors, 0 fallbacks, 236,351 input tokens, 13,095 output tokens, and Rs 9.846057 estimated cost at the time checked.
-- An unauthenticated, valid `POST /v1/ingest` returned 401. The authenticated request queued five items (job `58cefcc921524306aeec77b05d9d685b`), but all five Render fetches failed with upstream EPFO HTTP 403. I restored all five records from the local PDFs, with extraction disabled, and the database report now has 116 documents, 1,188 pages, and 18 dead-letter items. The five remote-fetch failures remain visible in the job history; the live source restriction is unresolved.
-- Local Docker worker was stopped before the live request so it could not compete with Render for the shared Neon database. The later local restoration used Tesseract against the five existing local PDFs.
+- PR #24 added D10 to `main`; PR #27 fixed the worker's missing downloader User-Agent and is deployed at `1168313eef39195f932413747cf74e0384c22419`. CI/CD succeeded, the D10 migration is applied, and `/health` returned 200 with the deployed SHA.
+- Render Redis Key Value is provisioned in Singapore. `REDIS_URL`, `WORKER_IN_API`, and `ADMIN_TOKEN` are configured; OCR job timeout is 600 seconds and worker concurrency is 1. `/v1/usage` returned 200 with 213 calls, 11 errors, 0 fallbacks, 236,351 input tokens, 13,095 output tokens, and Rs 9.846057 estimated cost at the time checked.
+- An unauthenticated, valid `POST /v1/ingest` returned 401. A Render-authenticated batch queued five items, but Render received HTTP 403 from EPFO for all five, including after the User-Agent fix; the same downloader fetched all five locally with HTTP 200. This indicates an egress/IP restriction at the EPFO edge.
+- All five existing PDFs were then processed through the authenticated local API and ARQ worker against the shared Neon database, with extraction disabled. Four finished in the first job; the 38-page `SS_Result.pdf` finished in a single-worker retry in 364 seconds with a 600-second timeout. Neon again contains 116 documents and 1,188 pages; historical failed attempts remain in the dead-letter count of 25.
+- Render's live source fetch is still blocked by upstream HTTP 403. The queue, local-file processing, OCR, database writes, and deployed API have all been exercised successfully; obtaining Render egress access to EPFO would require a change outside this repository.
 
 ### Week 2 against Monday's estimate
 
