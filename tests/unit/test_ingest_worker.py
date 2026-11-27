@@ -1,7 +1,9 @@
 import httpx
 import pytest
 
+from pensionpal.ingest.fetch import USER_AGENT
 from pensionpal.workers.ingest import Pace, Permanent, get_file, plan
+from pensionpal.workers.main import make_worker_http_client
 
 
 def record(name: str, digest: str = "a" * 64, **extra) -> dict:
@@ -28,6 +30,17 @@ def test_plan_filters_source_and_deduplicates_hashes():
 def test_plan_applies_limit_after_filtering():
     records = [record(str(number), str(number) * 64) for number in range(1, 4)]
     assert len(plan(records, set(), limit=2)) == 2
+
+
+@pytest.mark.asyncio
+async def test_worker_http_client_uses_polite_download_headers():
+    client = make_worker_http_client(1)
+    try:
+        assert client.headers["User-Agent"] == USER_AGENT
+        assert client.headers["Accept"] == "*/*"
+        assert client.follow_redirects is False
+    finally:
+        await client.aclose()
 
 
 @pytest.mark.asyncio

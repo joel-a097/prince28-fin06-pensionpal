@@ -15,6 +15,7 @@ from pensionpal.config import get_settings
 from pensionpal.db.llm_calls import make_recorder
 from pensionpal.db.models import IngestItem
 from pensionpal.db.session import make_engine, make_sessionmaker
+from pensionpal.ingest.fetch import make_client
 from pensionpal.llm.doc_meta import DocMeta
 from pensionpal.llm.gateway import build_gateway
 from pensionpal.llm.prompts import latest
@@ -22,6 +23,11 @@ from pensionpal.workers.ingest import Pace, PacedGateway, ingest_document
 
 logger = logging.getLogger("pensionpal.worker")
 settings = get_settings()
+
+
+def make_worker_http_client(concurrency: int) -> httpx.AsyncClient:
+    """Use the downloader's polite headers and bound connections to worker jobs."""
+    return make_client(max_concurrency=max(1, concurrency))
 
 
 async def startup(ctx: dict) -> None:
@@ -33,7 +39,7 @@ async def startup(ctx: dict) -> None:
     engine = make_engine(cfg)
     ctx["engine"] = engine
     ctx["sessionmaker"] = make_sessionmaker(engine)
-    ctx["http"] = httpx.AsyncClient(timeout=30, follow_redirects=False)
+    ctx["http"] = make_worker_http_client(cfg.ingest_concurrency)
     ctx["pace"] = Pace(cfg.ingest_rpm)
     ctx["gateway"] = build_gateway(cfg, recorder=make_recorder(ctx["sessionmaker"]))
     ctx["paced_gateway"] = PacedGateway(ctx["gateway"], ctx["pace"])
