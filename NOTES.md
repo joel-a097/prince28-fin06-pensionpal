@@ -300,3 +300,10 @@ The first recovery left stale `running` items waiting because startup only put `
 - The prior isolated kill/recovery drill completed 20 items with 18 done, 2 idempotent skips, and 0 failed; stored documents had unique content hashes. See the detailed job IDs in the final verification entry above.
 - Neon was inspected read-only and already contains the Day 10 tables at revision `f31a9d8c0b27`; no production migration was applied.
 - The approved Render test job `d69f5939754c449dbe8563e31145a619` recorded three HTTP 403 source failures and no processed pages. The report reflects current Neon totals; the upstream source restriction remains unresolved.
+
+### Neon revision reconciliation
+
+- The first CD attempt for `b28fa98f7f093ab0bd1729748ee609ecbcd5dce5` stopped in Alembic before DDL because the deployed database revision `f31a9d8c0b27` was not present in the checked-in migration graph. Render deployment and smoke testing were skipped.
+- Read-only Neon checks confirmed revision `f31a9d8c0b27` and that both `document_chunks` and `document_chunks_local` already exist. The matching additive migration (`a4d73e6192f0` -> `f31a9d8c0b27`) is restored in the migration graph; `alembic upgrade head` should therefore be a no-op on this Neon revision and will not alter existing documents, pages, or embeddings.
+- On the main-based candidate, `uv run poe test` passed 140 tests; `uv run poe test-integration` passed 19 tests; lint and the API/worker Docker build passed. The local integration test exposed a timezone boundary in LLM usage rollups; the date window now uses UTC, matching stored timestamps.
+- The migration-reconciliation branch has 140 passing unit tests, 19 passing integration tests, and clean lint/format checks. No production migration has been applied by this task.
