@@ -1,6 +1,6 @@
 """Persistence and rollups for LLM usage."""
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -25,7 +25,9 @@ class LlmCallRepository:
 
     async def by_day(self, days: int = 7) -> list[dict[str, Any]]:
         since = datetime.combine(
-            date.today() - timedelta(days=days - 1), time.min, tzinfo=UTC
+            datetime.now(UTC).date() - timedelta(days=days - 1),
+            time.min,
+            tzinfo=UTC,
         )
         day = func.date(LlmCall.created_at).label("day")
         stmt = (
