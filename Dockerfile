@@ -22,7 +22,9 @@ FROM python:3.11-slim
 
 ARG GIT_SHA=dev
 
-RUN groupadd --system app && useradd --system --gid app --home-dir /app --no-create-home app
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --home-dir /app --no-create-home app
 WORKDIR /app
 
 # Only what the app needs at runtime: the venv, migrations, scripts and seed data.

@@ -237,3 +237,45 @@ Smoke test passed
 - `extract_v1` metadata is valid for all 110 parsed documents, including all 100 circulars. The extractor now takes the first three nonblank pages, so blank cover pages do not block extraction. Neon recorded 119 Gemini 3.5 Flash Lite calls, 0 provider errors, 220,005 input tokens, 12,837 output tokens, and estimated cost Rs 9.318924.
 - Live `/v1/documents?parser=ocr-eng&limit=1` returned 200 and 57 matching OCR-parsed records. The deployed D09 service reported commit `edfdc36b226e3f6cbe48db0ae3083707c118bf40`; the OCR robustness fixes are in this follow-up change.
 - Local verification: `uv run poe test` -> 111 passed; Ruff check and format checks pass.
+
+## D10 · Queue and worker
+
+- Added ARQ/Redis ingestion, Postgres job and item state, authenticated queueing endpoints, worker recovery, OCR fallback for scans, and a database-backed report.
+- Neon migration `c40b3d9a2f11` is applied. Local Redis ran in Docker; the API and ARQ worker used the same Neon database.
+- First 10-item batch: 10 queued; finished in 14 s with 1 done, 9 skipped, 0 failed; 21 pages. The skipped items already had parsed content from the earlier attempt. Local metadata extraction was disabled because the configured Gemini credential returned `INVALID_AUTH_KEY`.
+- Local pace: about 1.4 s per item for this batch (INGEST_RPM=12, INGEST_CONCURRENCY=2; model calls disabled locally).
+
+### Kill test
+
+- Queued 20. At the hard worker kill: queued 12, running 2, done 5, failed 1.
+- After recovery: done 15 + skipped 1 + failed 4 = 20; no items remained queued or running.
+- Corpus documents after the run: 116; distinct external IDs: 116.
+- The interrupted work returned over about 6 minutes in this debugging run. The first replacement worker was stopped while OCR was still active; the final recovery needed a longer local timeout and startup recovery for stale `running` rows.
+- No row was duplicated: the worker atomically claims an item, and checks document content hashes before parsing and saving.
+
+### Dead-letter list
+
+| Stage | Items in the 20-item kill-test job | What I did |
+|---|---:|---|
+| Parse (`ocr_unavailable`) | 3 | Kept the source and reason in the item dead-letter record; these scans failed Tesseract OCR locally. |
+| Gave up after worker timeout | 1 | Recorded after three worker starts; this PDF exceeded the local OCR time limit. |
+
+### Live ingestion
+
+- Render Redis Key Value is provisioned in Singapore. The service environment now has REDIS_URL, WORKER_IN_API, and ADMIN_TOKEN configured; deployment and live requests are pending the Day 10 merge.
+- Local Docker worker is stopped before live ingestion so it cannot compete with Render for the shared Neon database.
+
+### Week 2 against Monday's estimate
+
+- `docs/CAPACITY.md` target: 2,000 pages and 763,020 estimated tokens. `docs/INGEST_REPORT.md` currently reports 1,155 pages and 447,596 estimated tokens.
+- Difference: 845 pages and 315,424 estimated tokens below the full-target estimate. This run has 116 documents; the target is an estimate, not a corpus-completion count.
+
+### One thing that went wrong today, and how I fixed it
+
+The first recovery left stale `running` items waiting because startup only put `queued` items back in Redis. Startup now atomically expires stale worker leases, requeues retryable items, and dead-letters items at the attempt limit. A separate local OCR run showed that scanned files can exceed a 60-second lease, so the local drill used a five-minute timeout.
+
+### What I learnt
+
+- Postgres is the durable record of each item's state; Redis only carries the work notification.
+- A worker restart must reclaim stale `running` rows as well as restore queued rows.
+- OCR duration varies substantially by PDF, so the worker lease must exceed the largest expected parse time.
