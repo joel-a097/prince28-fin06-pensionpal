@@ -13,9 +13,19 @@ class FakeIngestRepo:
     def __init__(self, empty=False):
         self.empty = empty
         self.created = []
+        self.known = {"a" * 64} if empty else set()
+        self.uploaded = []
 
     async def known_ids(self):
-        return set()
+        return self.known
+
+    async def save_local_document(self, record, parsed):
+        self.uploaded.append((record, parsed))
+        return {
+            "status": "inserted",
+            "document_id": "d" * 64,
+            "pages": len(parsed.pages),
+        }
 
     async def create(self, records):
         self.created = records
@@ -164,5 +174,82 @@ def test_ingest_limit_validation():
     with client:
         response = client.post(
             "/v1/ingest", json={"limit": 0}, headers={"X-Admin-Token": "secret"}
+        )
+    assert response.status_code == 422
+
+
+def local_record(digest="a" * 64):
+    return {
+        "url": "https://example.test/circular.pdf",
+        "source": "epfo",
+        "licence": "Public document",
+        "title": "Circular",
+        "path": "data/raw/epfo/circular.pdf",
+        "sha256": digest,
+        "status": "downloaded",
+    }
+
+
+def test_local_plan_requires_admin_token():
+    client, _, _ = make_client()
+    with client:
+        response = client.post(
+            "/v1/ingest/local/plan", json={"records": [local_record()]}
+        )
+    assert response.status_code == 401
+
+
+def test_local_plan_excludes_existing_hashes_before_local_processing():
+    client, _, _ = make_client(empty=True)
+    with client:
+        response = client.post(
+            "/v1/ingest/local/plan",
+            json={"records": [local_record()], "limit": 5},
+            headers={"X-Admin-Token": "secret"},
+        )
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "records": []}
+
+
+def test_local_document_upload_uses_production_page_store():
+    client, repo, _ = make_client()
+    payload = {
+        "record": local_record("b" * 64),
+        "parsed": {
+            "parser": "pymupdf",
+            "kind": "pdf",
+            "title": "Circular",
+            "pages": [
+                {"page_no": 1, "text": "Circular text", "headings": [], "tables": 0}
+            ],
+        },
+    }
+    with client:
+        response = client.post(
+            "/v1/ingest/local/document",
+            json=payload,
+            headers={"X-Admin-Token": "secret"},
+        )
+    assert response.status_code == 200
+    assert response.json()["status"] == "inserted"
+    assert len(repo.uploaded) == 1
+    assert repo.uploaded[0][1].pages[0].text == "Circular text"
+
+
+def test_local_document_upload_rejects_paths_outside_raw_corpus():
+    client, _, _ = make_client()
+    payload = {
+        "record": local_record("b" * 64) | {"path": "../../secrets.txt"},
+        "parsed": {
+            "parser": "pymupdf",
+            "kind": "pdf",
+            "pages": [{"page_no": 1, "text": "text"}],
+        },
+    }
+    with client:
+        response = client.post(
+            "/v1/ingest/local/document",
+            json=payload,
+            headers={"X-Admin-Token": "secret"},
         )
     assert response.status_code == 422
