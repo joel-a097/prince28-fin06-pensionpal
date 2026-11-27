@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from pensionpal.api.deps import check_db, get_gateway, get_repo
+from pensionpal.api.deps import check_db, get_gateway, get_repo, get_retriever
 from pensionpal.api.main import create_app
 from pensionpal.config import Settings
 from pensionpal.llm.gateway import FakeLLM, LLMGateway
@@ -33,6 +33,14 @@ class FakeRepo:
         return next((r for r in self.rows if r["id"] == external_id), None)
 
 
+class FakeRetriever:
+    def __init__(self, evidence=None):
+        self.evidence = evidence or []
+
+    async def retrieve(self, question):
+        return self.evidence
+
+
 @pytest.fixture
 def settings():
     # _env_file=None: ignore your local .env so tests behave the same everywhere
@@ -56,5 +64,6 @@ def client(settings, db_state):
     app.dependency_overrides[get_gateway] = lambda: LLMGateway(
         [FakeLLM("gemini", "test-model")]
     )
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever()
     with TestClient(app) as c:
         yield c

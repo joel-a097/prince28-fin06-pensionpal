@@ -3,7 +3,7 @@
 from pathlib import PurePosixPath
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -14,8 +14,16 @@ from pydantic import (
 )
 from redis.exceptions import RedisError
 
-from pensionpal.api.deps import IngestRepoDep, ManifestDep, QueueDep, require_admin
+from pensionpal.api.deps import (
+    EmbedderDep,
+    IngestRepoDep,
+    ManifestDep,
+    QueueDep,
+    require_admin,
+)
+from pensionpal.ingest.indexing import IndexContentChanged, index_document
 from pensionpal.ingest.parse import ParsedDoc, ParsedPage
+from pensionpal.llm.embeddings import EmbeddingError
 from pensionpal.workers.ingest import plan
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
@@ -140,7 +148,10 @@ async def local_plan(body: LocalPlanRequest, repo: IngestRepoDep) -> dict[str, A
 
 @router.post("/local/document", dependencies=[Depends(require_admin)])
 async def upload_local_document(
-    body: LocalDocumentUpload, repo: IngestRepoDep
+    body: LocalDocumentUpload,
+    request: Request,
+    repo: IngestRepoDep,
+    embedder: EmbedderDep,
 ) -> dict[str, str | int]:
     """Persist locally parsed pages using the production document/page tables."""
     record = body.record.model_dump(mode="json")
@@ -164,6 +175,21 @@ async def upload_local_document(
             status_code=409,
             detail="This manifest path already exists with different content.",
         )
+    if embedder.configured:
+        try:
+            chunks, _ = await index_document(
+                request.app.state.session_factory,
+                embedder,
+                str(result["document_id"]),
+                request.app.state.settings,
+            )
+        except (EmbeddingError, IndexContentChanged) as error:
+            raise HTTPException(
+                status_code=503, detail="Document indexing failed; retry the upload."
+            ) from error
+        result = result | {"index_status": "ready", "chunks": chunks}
+    else:
+        result = result | {"index_status": "pending", "chunks": 0}
     return result
 
 

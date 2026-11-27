@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     )
     llm_fallback_base_url: str = "https://api.groq.com/openai/v1"
     llm_timeout_seconds: float = 30.0
+    embedding_model: str = "gemini-embedding-001"
+    embedding_batch_size: int = 32
+    chunk_max_chars: int = 2000
+    chunk_overlap_chars: int = 200
+    retrieval_limit: int = 5
+    retrieval_max_distance: float = 0.65
     usd_inr: float = 95.0
     prompts_dir: Path = Path("prompts")
 

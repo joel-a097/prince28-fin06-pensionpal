@@ -18,6 +18,7 @@ from sqlalchemy import and_, func, or_, select, update
 
 from pensionpal.db.models import Document, IngestItem
 from pensionpal.ingest.fetch import RETRYABLE, HostGate, Robots, Source, fetch_one
+from pensionpal.ingest.indexing import index_document
 from pensionpal.ingest.parse import (
     ParseError,
     parse_file,
@@ -199,8 +200,23 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
             if document is None:
                 raise RuntimeError("saved document could not be read back")
             doc_id, title = document.id, document.title
+            document_external_id = document.external_id
             pages = int(document.metadata_.get("pages", 0))
             note = document.metadata_.get("extract") or {}
+
+    embedder = ctx.get("embedder")
+    if embedder is not None and embedder.configured:
+        await index_document(
+            ctx["sessionmaker"],
+            embedder,
+            document_external_id,
+            ctx["settings"],
+        )
+    elif embedder is not None:
+        logger.warning(
+            "document %s saved without retrieval indexing: GEMINI_API_KEY is unset",
+            document_external_id,
+        )
 
     task = ctx.get("extract")
     if task and note.get("prompt") != task["version"]:

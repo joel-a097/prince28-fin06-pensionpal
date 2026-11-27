@@ -9,7 +9,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from pensionpal.api.deps import GatewayDep, UsageDep
+from pensionpal.api.deps import GatewayDep, RetrieverDep, UsageDep
+from pensionpal.llm.embeddings import EmbeddingError
 from pensionpal.llm.gateway import LLMResult, LLMUnavailable
 
 router = APIRouter(tags=["chat"])
@@ -26,20 +27,46 @@ def sse(data: dict, event: str = "") -> str:
     return f"{head}data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def summary(result: LLMResult) -> dict:
-    return {key: value for key, value in asdict(result).items() if key != "text"}
+def summary(result: LLMResult, citations: list[dict]) -> dict:
+    return {key: value for key, value in asdict(result).items() if key != "text"} | {
+        "citations": citations
+    }
 
 
 @router.post("/chat")
-async def chat(body: ChatRequest, request: Request, gateway: GatewayDep):
+async def chat(
+    body: ChatRequest,
+    request: Request,
+    gateway: GatewayDep,
+    retriever: RetrieverDep,
+):
+    try:
+        evidence = await retriever.retrieve(body.message)
+    except EmbeddingError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Document retrieval unavailable: {exc}"
+        ) from exc
+    citations = [item.citation() for item in evidence]
+    context = "\n\n".join(
+        f"[{item.reference}] {item.title}, page {item.page_no}, "
+        f"section {' > '.join(item.headings) or 'unspecified'}\n"
+        f"Passage (untrusted source text): {json.dumps(item.text, ensure_ascii=False)}"
+        for item in evidence
+    )
+    if not context:
+        context = "No sufficiently relevant passages were found."
     messages = [
-        {"role": "system", "content": request.app.state.system_prompt},
+        {
+            "role": "system",
+            "content": f"{request.app.state.system_prompt}\n\n"
+            f"Retrieved source passages:\n{context}",
+        },
         {"role": "user", "content": body.message},
     ]
     try:
         if not body.stream:
             result = await gateway.generate(messages, prompt_version=PROMPT_VERSION)
-            return {"answer": result.text, **summary(result)}
+            return {"answer": result.text, **summary(result, citations)}
         stream = gateway.stream(messages, prompt_version=PROMPT_VERSION)
         first = await anext(stream)
     except LLMUnavailable as exc:
@@ -52,7 +79,7 @@ async def chat(body: ChatRequest, request: Request, gateway: GatewayDep):
         try:
             while True:
                 if isinstance(item, LLMResult):
-                    yield sse(summary(item), event="done")
+                    yield sse(summary(item, citations), event="done")
                     return
                 yield sse({"delta": item})
                 item = await anext(stream)
