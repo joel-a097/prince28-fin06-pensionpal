@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from pensionpal.core.logging_config import request_id_var
@@ -118,6 +118,7 @@ async def document_text(
     stmt = (
         select(Page.text)
         .where(Page.document_id == document.id)
+        .where(func.trim(Page.text) != "")
         .order_by(Page.page_no)
         .limit(3)
     )

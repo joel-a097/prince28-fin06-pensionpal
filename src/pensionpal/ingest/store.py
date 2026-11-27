@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pensionpal.db.models import Document, Page, ParseFailure
@@ -30,10 +30,20 @@ async def already_parsed(
     row = await session.scalar(
         select(Document).where(Document.external_id == external_id(path))
     )
+    has_text_pages = (
+        await session.scalar(
+            select(Page.id)
+            .where(Page.document_id == row.id, func.trim(Page.text) != "")
+            .limit(1)
+        )
+        if row is not None
+        else None
+    )
     return bool(
         row
         and row.sha256 == sha256
         and (source_title is None or row.title == source_title)
+        and has_text_pages is not None
     )
 
 

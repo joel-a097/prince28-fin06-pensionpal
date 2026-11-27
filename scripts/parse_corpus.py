@@ -86,21 +86,28 @@ async def process(args: argparse.Namespace) -> int:
                 digest = content_hash(path)
             else:
                 digest = record.get("sha256") or "0" * 64
+            skip = False
             async with sessions() as session, session.begin():
                 source_title = record.get("title")
                 if path.is_file() and await already_parsed(
                     session, rel, digest, source_title
                 ):
                     counts["already_parsed"] += 1
-                    continue
-                if not args.retry_failed and await has_failure(session, rel):
+                    skip = True
+                elif not args.retry_failed and await has_failure(session, rel):
                     counts["failed_before"] += 1
-                    continue
-                try:
-                    if not path.is_file():
-                        raise ParseError("missing_file", "manifest path is not present")
-                    parsed = parse_source(path, args.ocr)
-                except ParseError as error:
+                    skip = True
+            if skip:
+                continue
+
+            # Parsing and OCR can take minutes for large scans. Keep that work
+            # outside a database transaction so Neon does not time it out.
+            try:
+                if not path.is_file():
+                    raise ParseError("missing_file", "manifest path is not present")
+                parsed = parse_source(path, args.ocr)
+            except ParseError as error:
+                async with sessions() as session, session.begin():
                     attempts = await save_failure(
                         session,
                         path=rel,
@@ -108,13 +115,15 @@ async def process(args: argparse.Namespace) -> int:
                         source_url=record.get("final_url") or record["url"],
                         error=error,
                     )
-                    counts["failed"] += 1
-                    reasons[error.reason] += 1
-                    print(
-                        f"failed {error.reason:<16} {rel} attempts={attempts}",
-                        flush=True,
-                    )
-                    continue
+                counts["failed"] += 1
+                reasons[error.reason] += 1
+                print(
+                    f"failed {error.reason:<16} {rel} attempts={attempts}",
+                    flush=True,
+                )
+                continue
+
+            async with sessions() as session, session.begin():
                 action, page_count = await save_parsed(
                     session,
                     path=rel,
