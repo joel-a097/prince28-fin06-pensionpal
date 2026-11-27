@@ -3,9 +3,13 @@
 import asyncio
 import hashlib
 import json
+import time
 from pathlib import Path
 
 from pensionpal.config import get_settings
+from pensionpal.core.logging_config import request_id_var
+from pensionpal.db.llm_calls import make_recorder
+from pensionpal.db.session import make_engine, make_sessionmaker
 from pensionpal.llm.classify import accuracy, classify, find_leaks
 from pensionpal.llm.gateway import build_gateway
 from pensionpal.llm.prompts import versions
@@ -16,6 +20,15 @@ CACHE = ROOT / "eval" / "cache"
 
 
 async def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="ask the model again, even for cached questions",
+    )
+    args = parser.parse_args()
     rows = [
         json.loads(line)
         for line in TESTSET.read_text(encoding="utf-8").splitlines()
@@ -30,9 +43,12 @@ async def main() -> int:
             "test set needs at least 20 completed questions with valid labels"
         )
     CACHE.mkdir(parents=True, exist_ok=True)
-    gateway = build_gateway(get_settings())
+    settings = get_settings()
+    engine = make_engine(settings)
+    gateway = build_gateway(settings, recorder=make_recorder(make_sessionmaker(engine)))
     calls = 0
     reports = []
+    last_call: float | None = None
     try:
         for name, path in versions(ROOT / "prompts", "classify"):
             prompt = path.read_text(encoding="utf-8").strip()
@@ -43,19 +59,28 @@ async def main() -> int:
             input_tokens = 0
             for index, row in enumerate(rows, 1):
                 digest = hashlib.sha256(
-                    f"{prompt}\0{row['question']}".encode()
+                    f"{settings.llm_primary_model}\0{prompt}\0{row['question']}".encode()
                 ).hexdigest()
                 cache_path = CACHE / f"{digest}.json"
-                if cache_path.exists():
+                if cache_path.exists() and not args.refresh:
                     reply = json.loads(cache_path.read_text(encoding="utf-8"))
                 else:
-                    label, result = await classify(
-                        gateway, prompt, name, row["question"]
-                    )
+                    if last_call is not None:
+                        await asyncio.sleep(max(0, 5 - (time.monotonic() - last_call)))
+                    token = request_id_var.set(f"eval-{digest[:48]}")
+                    try:
+                        label, result = await classify(
+                            gateway, prompt, name, row["question"]
+                        )
+                    finally:
+                        request_id_var.reset(token)
+                    last_call = time.monotonic()
                     reply = {
                         "label": label,
                         "text": result.text,
                         "tokens_in": result.tokens_in,
+                        "tokens_out": result.tokens_out,
+                        "model": result.model,
                     }
                     cache_path.write_text(json.dumps(reply), encoding="utf-8")
                     calls += 1
@@ -75,6 +100,7 @@ async def main() -> int:
         print(f"model calls made now: {calls} (other answers came from eval/cache)")
     finally:
         await gateway.aclose()
+        await engine.dispose()
     notes = ROOT / "NOTES.md"
     content = notes.read_text(encoding="utf-8")
     start, end = "<!-- prompt-comparison:start -->", "<!-- prompt-comparison:end -->"

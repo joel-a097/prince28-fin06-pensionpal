@@ -5,6 +5,7 @@ import asyncio
 import json
 
 from pensionpal.config import get_settings
+from pensionpal.db.llm_calls import make_recorder
 from pensionpal.db.session import make_engine, make_sessionmaker
 from pensionpal.llm.doc_meta import DocMeta
 from pensionpal.llm.extract import run
@@ -29,10 +30,11 @@ async def main() -> int:
     settings = get_settings()
     version, prompt = latest(settings.prompts_dir, "extract")
     engine = make_engine(settings)
-    gateway = build_gateway(settings)
+    sessions = make_sessionmaker(engine)
+    gateway = build_gateway(settings, recorder=make_recorder(sessions))
     try:
         counts = await run(
-            make_sessionmaker(engine),
+            sessions,
             gateway,
             DocMeta,
             prompt,
