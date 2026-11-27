@@ -11,7 +11,7 @@ From the repository root:
 ```powershell
 uv sync --locked
 $env:POSTGRES_HOST_PORT = "5434"
-$env:ADMIN_TOKEN = "local-only-test-token"
+Set-Item Env:ADMIN_TOKEN (Read-Host -Prompt "Enter a disposable local admin token")
 $env:WORKER_IN_API = "false"
 $env:INGEST_CONCURRENCY = "1"
 $env:INGEST_RPM = "12"
@@ -25,7 +25,7 @@ docker compose run --build --rm migrate
 Run PostgreSQL integration tests against the isolated Compose test database:
 
 ```powershell
-$env:TEST_DATABASE_URL = "postgresql://app:app@localhost:5434/app_test"
+$env:TEST_DATABASE_URL = "postgresql://app:app@localhost:5434/app_test"  # pragma: allowlist secret
 uv run poe test-integration
 ```
 
@@ -60,7 +60,7 @@ signal/event-loop handling, set `$env:WORKER_IN_API = "true"` and run
 In another PowerShell window:
 
 ```powershell
-$env:ADMIN_TOKEN = "local-only-test-token"
+Set-Item Env:ADMIN_TOKEN (Read-Host -Prompt "Enter the same local admin token")
 uv run python scripts/ingest.py --limit 10 --url http://127.0.0.1:8000
 ```
 
