@@ -281,3 +281,21 @@ The first recovery left stale `running` items waiting because startup only put `
 - Postgres is the durable record of each item's state; Redis only carries the work notification.
 - A worker restart must reclaim stale `running` rows as well as restore queued rows.
 - OCR duration varies substantially by PDF, so the worker lease must exceed the largest expected parse time.
+
+## Final Day 10 verification (2026-11-27)
+
+- `uv run poe test`: 144 passed. `uv run poe lint`: Ruff checks and formatting passed. `uv lock --check` and `git diff --check` passed.
+- The PostgreSQL integration suite passed against the isolated Compose database on host port 5434: 20 passed. An invocation without `TEST_DATABASE_URL` initially hit an unrelated listener on port 5433 and failed authentication; it did not alter the test database.
+- Local 10-item job `a1ebea39eb0f441b9219b4e3813d726a`: 10 done, 0 failed, 429 pages. The local 20-item hard-kill/recovery job `86432134ca2540ea8652c79cdbaf408d`: 18 done + 2 skipped + 0 failed; no queued/running items remained; 99 pages.
+- The isolated local database had 50 documents and 50 distinct SHA-256 hashes after both jobs. Its containers were stopped without deleting the data volume.
+- Read-only Neon inspection showed revision `f31a9d8c0b27` and the existing ingestion/document/page tables. No production migration was run.
+- An approved five-record request to current Render queued three records; job `d69f5939754c449dbe8563e31145a619` ended with 3 failures, 0 processed pages. The source returned HTTP 403 after one attempt per record; no source restriction was bypassed.
+- The report was regenerated from Neon after that job: 127 documents, 1,230 pages, 2,100,057 text characters, 525,014 estimated tokens, and 28 dead letters.
+
+### Release-branch verification
+
+- On `feat/day-10-queue`, `uv sync --locked`, `uv lock --check`, and `uv run poe lint` passed. With `APP_ENV=ci`, `uv run poe test` passed 127 unit tests and `TEST_DATABASE_URL` pointed at the isolated Docker Postgres, `uv run poe test-integration` passed 16 tests.
+- Docker built the API and worker images. A separate local Compose database applied migrations through `c40b3d9a2f11` and seeded 20 local records; the API returned healthy, the worker started, and an unauthenticated ingestion request returned 401.
+- The prior isolated kill/recovery drill completed 20 items with 18 done, 2 idempotent skips, and 0 failed; stored documents had unique content hashes. See the detailed job IDs in the final verification entry above.
+- Neon was inspected read-only and already contains the Day 10 tables at revision `f31a9d8c0b27`; no production migration was applied.
+- The approved Render test job `d69f5939754c449dbe8563e31145a619` recorded three HTTP 403 source failures and no processed pages. The report reflects current Neon totals; the upstream source restriction remains unresolved.

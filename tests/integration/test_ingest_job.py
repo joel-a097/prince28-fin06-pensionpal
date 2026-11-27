@@ -1,5 +1,6 @@
 """Exercise ingestion state against a migrated PostgreSQL database."""
 
+import asyncio
 import hashlib
 from types import SimpleNamespace
 
@@ -95,6 +96,43 @@ async def test_reprocessing_same_content_does_not_duplicate_document(
         )
     assert first[0] == "done"
     assert second[0] == "skipped"
+    assert len(docs) == 1
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_same_content_does_not_duplicate_document(
+    database_url, tmp_path
+):
+    first_path = tmp_path / "first.md"
+    second_path = tmp_path / "second.md"
+    content = "# Concurrent\n\nThe same content is ingested simultaneously."
+    first_path.write_text(content)
+    second_path.write_text(content)
+    engine, sessionmaker, settings = context(database_url)
+    first_id, _ = await queued_item(sessionmaker, first_path)
+    second_id, _ = await queued_item(sessionmaker, second_path)
+    async with httpx.AsyncClient() as client:
+        ctx = {
+            "settings": settings,
+            "sessionmaker": sessionmaker,
+            "http": client,
+            "extract": None,
+        }
+        results = await asyncio.gather(
+            process(ctx, first_id),
+            process(ctx, second_id),
+        )
+    async with sessionmaker() as session:
+        docs = list(
+            await session.scalars(
+                select(Document).where(
+                    Document.sha256
+                    == hashlib.sha256(first_path.read_bytes()).hexdigest()
+                )
+            )
+        )
+    assert sorted(result[0] for result in results) == ["done", "skipped"]
     assert len(docs) == 1
     await engine.dispose()
 
