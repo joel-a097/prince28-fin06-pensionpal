@@ -46,6 +46,18 @@ def read_manifest(path: Path) -> list[dict]:
     ]
 
 
+def filter_manifest_records(records: list[dict], paths: list[str]) -> list[dict]:
+    if not paths:
+        return records
+    requested = {path.replace("\\", "/") for path in paths}
+    matching = [record for record in records if record.get("path") in requested]
+    found = {record["path"] for record in matching}
+    missing = requested - found
+    if missing:
+        raise ValueError("Manifest path(s) not found: " + ", ".join(sorted(missing)))
+    return matching
+
+
 def configure_tesseract() -> None:
     if sys.platform != "win32":
         return
@@ -97,6 +109,48 @@ async def upload_with_retry(
     raise RuntimeError("Upload retries exhausted")
 
 
+async def request_plan_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: dict[str, str],
+    payload: dict,
+    attempts: int,
+) -> list[dict]:
+    for attempt in range(1, attempts + 1):
+        try:
+            response = await client.post(url, json=payload, headers=headers)
+        except httpx.RequestError as error:
+            if attempt == attempts:
+                raise RuntimeError(
+                    f"Planning API request failed after {attempts} attempts "
+                    f"({type(error).__name__})"
+                ) from error
+            delay = min(30, 2 ** (attempt - 1))
+            logger.warning("Planning API unavailable; retrying in %ss", delay)
+            await asyncio.sleep(delay)
+            continue
+
+        if response.status_code in RETRYABLE and attempt < attempts:
+            delay = min(30, 2 ** (attempt - 1))
+            logger.warning(
+                "Planning API returned HTTP %s; retrying in %ss",
+                response.status_code,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            continue
+        if response.is_error:
+            detail = response.text[:300].replace("\n", " ")
+            raise RuntimeError(
+                f"Planning API returned HTTP {response.status_code}: {detail}"
+            )
+        try:
+            return response.json().get("records", [])
+        except (ValueError, AttributeError) as error:
+            raise RuntimeError("Planning API returned an invalid response") from error
+    raise RuntimeError("Planning API retries exhausted")
+
+
 async def ingest_record(
     record: dict,
     *,
@@ -145,6 +199,10 @@ async def run(args: argparse.Namespace) -> int:
     if not settings.admin_token:
         raise SystemExit("Set ADMIN_TOKEN in .env; the value is never printed.")
     records = read_manifest(Path(args.manifest))
+    try:
+        records = filter_manifest_records(records, args.path)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     headers = {"X-Admin-Token": settings.admin_token}
     root = args.url.rstrip("/")
     parsed_root = urlsplit(root)
@@ -161,20 +219,26 @@ async def run(args: argparse.Namespace) -> int:
     started = time.monotonic()
 
     async with httpx.AsyncClient(timeout=api_timeout) as api_client:
-        response = await api_client.post(
-            endpoint(root, "v1/ingest/local/plan"),
-            json={"records": records, "limit": args.limit, "source": args.source},
-            headers=headers,
-        )
-        if response.is_error:
-            detail = response.text[:300].replace("\n", " ")
-            raise SystemExit(
-                f"Planning API returned HTTP {response.status_code}: {detail}"
+        try:
+            selected = await request_plan_with_retry(
+                api_client,
+                endpoint(root, "v1/ingest/local/plan"),
+                headers,
+                {"records": records, "limit": args.limit, "source": args.source},
+                args.upload_attempts,
             )
-        selected = response.json().get("records", [])
+        except RuntimeError as error:
+            raise SystemExit(str(error)) from error
         logger.info(
             "Production plan selected %s unprocessed document(s)", len(selected)
         )
+        if args.dry_run:
+            for record in selected:
+                logger.info("PLAN      %s", record.get("path", "(unknown path)"))
+            logger.info(
+                "Dry run complete; no documents were downloaded, parsed, or uploaded"
+            )
+            return 0
         if not selected:
             logger.info(
                 "Nothing to do; already stored documents were not downloaded or parsed"
@@ -241,6 +305,17 @@ def main() -> int:
     parser.add_argument("--manifest", default=str(get_settings().manifest_file))
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--source", default="")
+    parser.add_argument(
+        "--path",
+        action="append",
+        default=[],
+        help="Limit planning to this manifest path; may be supplied more than once",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Ask production which documents are eligible without processing them",
+    )
     parser.add_argument("--upload-attempts", type=int, default=3)
     args = parser.parse_args()
     if args.limit < 1:

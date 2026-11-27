@@ -4,6 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
@@ -90,6 +91,36 @@ class Page(Base):
         UniqueConstraint("document_id", "page_no", name="uq_pages_document_page"),
         CheckConstraint("page_no >= 1", name="page_no_positive"),
     )
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer)
+    page_no: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    headings: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
+    content_hash: Mapped[str] = mapped_column(String(64))
+    embedding_model: Mapped[str] = mapped_column(String(80))
+    embedding: Mapped[list[float]] = mapped_column(Vector(768))
+
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "chunk_index", name="uq_document_chunks_document_chunk"
+        ),
+        Index(
+            "ix_document_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    document: Mapped[Document] = relationship()
 
 
 class ParseFailure(Base):

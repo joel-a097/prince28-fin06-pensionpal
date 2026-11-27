@@ -1,4 +1,4 @@
-from pensionpal.api.deps import get_usage_repo
+from pensionpal.api.deps import get_retriever, get_usage_repo
 from pensionpal.llm.gateway import FakeLLM, LLMError, LLMGateway
 
 
@@ -36,6 +36,39 @@ def test_chat_nonstream_returns_json(client):
     assert response.status_code == 200
     assert response.json()["answer"] == "A fake answer."
     assert response.json()["model"] == "test-model"
+
+
+def test_chat_includes_document_citations(client):
+    from tests.unit.conftest import FakeRetriever
+
+    citation = {
+        "reference": "D1",
+        "document_id": "a" * 64,
+        "title": "Transfer guide",
+        "source_url": "https://example.test/transfer.pdf",
+        "page_no": 2,
+        "headings": ["Transfer"],
+    }
+
+    class Evidence:
+        def __init__(self):
+            self.reference = "D1"
+            self.title = "Transfer guide"
+            self.page_no = 2
+            self.headings = ["Transfer"]
+            self.text = "Members can transfer their PF balance."
+
+        def citation(self):
+            return citation
+
+    client.app.dependency_overrides[get_retriever] = lambda: FakeRetriever([Evidence()])
+    response = client.post(
+        "/v1/chat",
+        json={"message": "How do I transfer PF?", "stream": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["citations"] == [citation]
 
 
 def test_chat_rejects_empty_and_oversized_messages(client):
@@ -82,5 +115,6 @@ def test_usage_limits_days_parameter(client):
 def test_system_prompt_has_safety_lines(client):
     response = client.post("/v1/chat", json={"message": "question", "stream": False})
     assert response.status_code == 200
-    assert "I am not sure" in client.app.state.system_prompt
-    assert "Never invent a section number" in client.app.state.system_prompt
+    system_prompt = " ".join(client.app.state.system_prompt.split())
+    assert "could not find enough information" in system_prompt
+    assert "Never invent a citation" in system_prompt

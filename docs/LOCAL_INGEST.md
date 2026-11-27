@@ -46,6 +46,16 @@ $document = Invoke-RestMethod -Uri "https://pensionpal.onrender.com/v1/documents
 $document | Select-Object title, doc_type, parser, pages, path
 ```
 
-Run the same ingest command again to verify deduplication. The API plan excludes document hashes already in Neon, so completed files are neither downloaded nor parsed again. Failed files remain eligible and can be retried by rerunning the command; uploads are idempotent if the API saved a document but the client lost the response.
+The production plan excludes hashes already stored in Neon or currently queued/running, so completed files are neither downloaded nor parsed. Failed files remain eligible and can be retried by rerunning the command; uploads are idempotent if the API saved a document but the client lost the response.
 
 The uploader uses the project's polite downloader, including its User-Agent and robots.txt checks. A local HTTP 403 is reported as a failure; the script does not use a proxy or alternate route to bypass source restrictions.
+
+To confirm that a processed document is excluded without processing any other document, use its path from the previous API response or query `/v1/documents/{id}`:
+
+```powershell
+$documentId = "PASTE_PRINTED_DOCUMENT_ID"
+$document = Invoke-RestMethod -Uri "https://pensionpal.onrender.com/v1/documents/$documentId"
+uv run python scripts/ingest_local.py --source epfo --path $document.path --dry-run
+```
+
+An empty production plan means its content hash is already stored or queued. A non-empty plan lists eligible paths only; dry-run never downloads, parses, or uploads them. The upload endpoint independently returns `skipped_duplicate` for an already stored path or content hash.

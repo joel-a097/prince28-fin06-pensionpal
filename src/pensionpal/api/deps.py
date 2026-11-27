@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pensionpal.db.ingest_jobs import IngestRepository
 from pensionpal.db.llm_calls import LlmCallRepository
 from pensionpal.db.repository import DocumentRepository
+from pensionpal.llm.embeddings import GeminiEmbedder
 from pensionpal.llm.gateway import LLMGateway
+from pensionpal.services.retrieval import DocumentRetriever
 
 
 async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -27,6 +29,14 @@ async def get_repo(
 
 async def get_gateway(request: Request) -> LLMGateway:
     return request.app.state.gateway
+
+
+async def get_embedder(request: Request) -> GeminiEmbedder:
+    return request.app.state.embedder
+
+
+async def get_retriever(request: Request) -> DocumentRetriever:
+    return request.app.state.retriever
 
 
 async def get_usage_repo(
@@ -76,6 +86,8 @@ async def require_admin(
 
 
 GatewayDep = Annotated[LLMGateway, Depends(get_gateway)]
+EmbedderDep = Annotated[GeminiEmbedder, Depends(get_embedder)]
+RetrieverDep = Annotated[DocumentRetriever, Depends(get_retriever)]
 UsageDep = Annotated[LlmCallRepository, Depends(get_usage_repo)]
 IngestRepoDep = Annotated[IngestRepository, Depends(get_ingest_repo)]
 QueueDep = Annotated[object, Depends(get_queue)]

@@ -229,7 +229,7 @@ def main() -> int:
     size.add_argument("--full-pages", type=int, default=1000)
     size.add_argument("--full-files", type=int)
     parser.add_argument("--embed-usd", type=float, default=0.20)
-    parser.add_argument("--dims", type=int, default=1024)
+    parser.add_argument("--dims", type=int, default=768)
     parser.add_argument("--chunk-tokens", type=int, default=500)
     parser.add_argument("--usd-inr", type=float, default=95.0)
     args = parser.parse_args()
