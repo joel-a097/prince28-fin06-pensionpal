@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi.testclient import TestClient
 
 from pensionpal.api.deps import get_ingest_repo, get_manifest, get_queue
@@ -105,8 +107,58 @@ def test_ingest_is_disabled_without_configured_token():
             client.post(
                 "/v1/ingest", json={}, headers={"X-Admin-Token": "anything"}
             ).status_code
-            == 403
+            == 401
         )
+
+
+def test_ingest_rejects_invalid_token():
+    client, _, _ = make_client()
+    with client:
+        response = client.post(
+            "/v1/ingest", json={}, headers={"X-Admin-Token": "wrong"}
+        )
+    assert response.status_code == 401
+
+
+def test_worker_in_api_uses_configured_redis_url(monkeypatch):
+    observed = {}
+
+    class FakeEngine:
+        async def dispose(self):
+            pass
+
+    class FakeResource:
+        async def aclose(self):
+            pass
+
+    class FakeWorker:
+        def __init__(self, **kwargs):
+            observed.update(kwargs)
+
+        async def async_run(self):
+            await asyncio.Future()
+
+    monkeypatch.setattr("pensionpal.api.main.make_engine", lambda _: FakeEngine())
+    monkeypatch.setattr("pensionpal.api.main.make_sessionmaker", lambda _: object())
+    monkeypatch.setattr("pensionpal.api.main.make_recorder", lambda _: object())
+    monkeypatch.setattr(
+        "pensionpal.api.main.build_gateway", lambda *_args, **_kwargs: FakeResource()
+    )
+    monkeypatch.setattr("arq.worker.Worker", FakeWorker)
+    settings = Settings(
+        app_env="ci",
+        database_url="postgresql://localhost/unused",
+        redis_url="redis://configured.example:6381/4",
+        worker_in_api=True,
+        _env_file=None,
+    )
+
+    with TestClient(create_app(settings)):
+        pass
+
+    assert observed["redis_settings"].host == "configured.example"
+    assert observed["redis_settings"].port == 6381
+    assert observed["redis_settings"].database == 4
 
 
 def test_ingest_queues_and_returns_202():

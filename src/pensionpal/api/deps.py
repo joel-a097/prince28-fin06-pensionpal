@@ -1,6 +1,7 @@
 """FastAPI dependency functions shared across routes."""
 
 import json
+import secrets
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Annotated
@@ -75,11 +76,11 @@ async def require_admin(
     x_admin_token: Annotated[str | None, Header()] = None,
 ) -> None:
     expected = request.app.state.settings.admin_token
-    if not expected:
+    if not expected or x_admin_token is None:
         raise HTTPException(
-            status_code=403, detail="Set ADMIN_TOKEN to allow ingestion here."
+            status_code=401, detail="Missing or wrong X-Admin-Token header."
         )
-    if x_admin_token != expected:
+    if not secrets.compare_digest(x_admin_token, expected):
         raise HTTPException(
             status_code=401, detail="Missing or wrong X-Admin-Token header."
         )

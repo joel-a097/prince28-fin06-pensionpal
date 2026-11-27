@@ -24,6 +24,15 @@ def external_id(path: str) -> str:
     return hashlib.sha256(path.replace("\\", "/").encode("utf-8")).hexdigest()
 
 
+async def lock_document_keys(session: AsyncSession, *names: str) -> None:
+    """Serialize document writes that share a path or content hash."""
+    for name in sorted(set(names)):
+        key = int.from_bytes(
+            hashlib.sha256(name.encode()).digest()[:8], "big", signed=True
+        )
+        await session.execute(select(func.pg_advisory_xact_lock(key)))
+
+
 async def already_parsed(
     session: AsyncSession, path: str, sha256: str, source_title: str | None = None
 ) -> bool:

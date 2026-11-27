@@ -3,6 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
@@ -55,7 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
             worker = Worker(
                 functions=WorkerSettings.functions,
-                redis_settings=WorkerSettings.redis_settings,
+                redis_settings=RedisSettings.from_dsn(cfg.redis_url),
                 queue_name=WorkerSettings.queue_name,
                 max_jobs=cfg.ingest_concurrency,
                 job_timeout=cfg.ingest_job_timeout,

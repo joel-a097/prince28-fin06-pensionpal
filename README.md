@@ -72,3 +72,6 @@ database volume.
 | Integration tests (needs `docker compose up`) | `make test-integration` | `uv run poe test-integration` |
 | Coverage report | `make cov` | `uv run poe cov` |
 | Lint and format check | `make lint` | `uv run poe lint` |
+
+For the PowerShell Redis/worker queue and recovery drill, see
+[docs/QUEUE_WORKER.md](docs/QUEUE_WORKER.md).
