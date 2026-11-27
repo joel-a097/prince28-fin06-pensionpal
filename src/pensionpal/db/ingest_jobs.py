@@ -1,5 +1,6 @@
 """Database operations for durable ingestion jobs and dead letters."""
 
+import hashlib
 from collections import Counter
 from uuid import uuid4
 
@@ -14,6 +15,8 @@ from pensionpal.db.models import (
     Page,
     ParseFailure,
 )
+from pensionpal.ingest.parse import ParsedDoc
+from pensionpal.ingest.store import external_id, save_parsed
 
 
 class IngestRepository:
@@ -40,6 +43,76 @@ class IngestRepository:
         item_ids = [item.id for item in items]
         await self.session.commit()
         return job_id, item_ids
+
+    async def save_local_document(
+        self, record: dict, parsed: ParsedDoc
+    ) -> dict[str, str | int]:
+        """Save locally parsed pages, skipping existing paths and content hashes."""
+        path = record["path"]
+        digest = record["sha256"]
+        identity = external_id(path)
+        lock_names = sorted((f"path:{identity}", f"sha:{digest}"))
+        async with self.session.begin():
+            # Serialize identical API uploads so a client retry cannot race itself.
+            for name in lock_names:
+                key = int.from_bytes(
+                    hashlib.sha256(name.encode()).digest()[:8], "big", signed=True
+                )
+                await self.session.execute(select(func.pg_advisory_xact_lock(key)))
+
+            existing_path = await self.session.scalar(
+                select(Document)
+                .where(Document.external_id == identity)
+                .with_for_update()
+            )
+            if existing_path is not None:
+                if existing_path.sha256 != digest:
+                    return {
+                        "status": "conflict",
+                        "document_id": existing_path.external_id,
+                        "pages": 0,
+                    }
+                page_count = await self.session.scalar(
+                    select(func.count(Page.id)).where(
+                        Page.document_id == existing_path.id
+                    )
+                )
+                if page_count:
+                    return {
+                        "status": "skipped_duplicate",
+                        "document_id": existing_path.external_id,
+                        "pages": int(page_count),
+                    }
+
+            existing_hash = await self.session.scalar(
+                select(Document).where(Document.sha256 == digest).limit(1)
+            )
+            if existing_hash is not None and existing_hash.external_id != identity:
+                duplicate_pages = await self.session.scalar(
+                    select(func.count(Page.id)).where(
+                        Page.document_id == existing_hash.id
+                    )
+                )
+                return {
+                    "status": "skipped_duplicate",
+                    "document_id": existing_hash.external_id,
+                    "pages": int(duplicate_pages or 0),
+                }
+
+            action, page_count = await save_parsed(
+                self.session,
+                path=path,
+                sha256=digest,
+                source_url=record.get("final_url") or record["url"],
+                licence=record.get("licence"),
+                source_title=record.get("title"),
+                parsed=parsed,
+            )
+            return {
+                "status": "inserted" if action == "inserted" else "repaired",
+                "document_id": identity,
+                "pages": page_count,
+            }
 
     async def progress(self, job_id: str) -> dict | None:
         job = await self.session.get(IngestJob, job_id)

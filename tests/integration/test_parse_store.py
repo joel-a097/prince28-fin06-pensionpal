@@ -1,10 +1,12 @@
 """Real PostgreSQL coverage for parser persistence and the additive migration."""
 
+import hashlib
 import uuid
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from pensionpal.config import Settings
+from pensionpal.db.ingest_jobs import IngestRepository
 from pensionpal.db.models import Document, Page, ParseFailure
 from pensionpal.db.session import make_engine, make_sessionmaker
 from pensionpal.ingest.parse import ParsedDoc, ParsedPage, ParseError
@@ -109,3 +111,48 @@ async def test_failure_retry_count_and_success_clears_dead_letter(database_url):
     await engine.dispose()
     assert (first, second) == (1, 2)
     assert remaining is None
+
+
+async def test_local_upload_is_idempotent_and_never_overwrites_content(database_url):
+    engine = make_engine(
+        Settings(app_env="ci", database_url=database_url, _env_file=None)
+    )
+    sessions = make_sessionmaker(engine)
+    path = f"data/raw/test/{uuid.uuid4().hex}.pdf"
+    digest = hashlib.sha256(path.encode()).hexdigest()
+    record = {
+        "path": path,
+        "sha256": digest,
+        "url": "https://example.test/local.pdf",
+        "source": "epfo",
+        "licence": "official source",
+        "title": "Local circular",
+    }
+    parsed = ParsedDoc("pymupdf", "pdf", "Local circular", [ParsedPage(1, "Text")])
+
+    async with sessions() as session:
+        inserted = await IngestRepository(session).save_local_document(record, parsed)
+    async with sessions() as session:
+        same_path = await IngestRepository(session).save_local_document(record, parsed)
+    async with sessions() as session:
+        same_content = await IngestRepository(session).save_local_document(
+            record | {"path": f"data/raw/test/copy-{uuid.uuid4().hex}.pdf"}, parsed
+        )
+    async with sessions() as session:
+        changed_content = await IngestRepository(session).save_local_document(
+            record | {"sha256": hashlib.sha256(b"changed").hexdigest()}, parsed
+        )
+        document_count = await session.scalar(
+            select(func.count(Document.id)).where(Document.sha256 == digest)
+        )
+        page_count = await session.scalar(
+            select(func.count(Page.id)).join(Document).where(Document.sha256 == digest)
+        )
+    await engine.dispose()
+
+    assert inserted["status"] == "inserted"
+    assert same_path["status"] == "skipped_duplicate"
+    assert same_content["status"] == "skipped_duplicate"
+    assert changed_content["status"] == "conflict"
+    assert document_count == 1
+    assert page_count == 1
