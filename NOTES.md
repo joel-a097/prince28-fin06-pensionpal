@@ -214,3 +214,25 @@ Smoke test passed
 - PF balance question response and one verified mistake: pending real call
 - Broken-primary drill: fallback provider ___; circuit opened after request ___; half-open retry ___
 - `/v1/usage`: calls ___; errors ___; fallbacks ___; total estimated cost Rs ___
+
+## D09 · Versioned prompts and structured document metadata
+
+- Added `classify_v1` through `classify_v4`, a labeled 20-question PensionPal test set, and `scripts/compare_prompts.py` with a prompt-and-question response cache and Neon usage recording.
+- Prompt comparison table (written by `scripts/compare_prompts.py`):
+
+<!-- prompt-comparison:start -->
+| Prompt | Accuracy | Input tokens |
+|---|---:|---:|
+| classify_v1 | 18/20 (90%) | 836 |
+| classify_v2 | 19/20 (95%) | 3016 |
+| classify_v3 | 20/20 (100%) | 5556 |
+| classify_v4 | 20/20 (100%) | 6416 |
+<!-- prompt-comparison:end -->
+- Measured with Gemini 3.5 Flash Lite because the configured Gemini 3.8 Flash returned HTTP 503 and Gemini 3.5 Flash timed out. v3 and v4 each scored 20/20; v3 used 5,556 input tokens versus v4's 6,416, so v3 is the more efficient prompt on this small test set. The first 60-call pass was not usage-logged; the refreshed 80-call pass was logged to Neon.
+- v4 adds a clear rule for live EPFO office hours after v2 mislabeled that kind of question off-topic. v3 and v4 both scored 20/20 on the 20-question set.
+- Added `DocMeta` for document kind, year, language, summary, topics, scheme names, form references, and section references. Extracted values merge into the existing JSONB metadata column, which `/v1/documents` already filters.
+- Added `scripts/extract_metadata.py` with schema validation, up to three repair attempts, per-document saves, prompt-version idempotency, and `--retry-failed`. No migration is required.
+- Re-ran `scripts/compare_prompts.py` with Gemini 3.5 Flash Lite; it reproduced the cached scores above with 0 new provider calls.
+- Extraction state in Neon: 53 parsed corpus documents, including 43 EPFO circulars. `extract_v1` metadata is valid for 48/53 documents (38/43 circulars); 5 circulars have no parsed page text. The normal run found 0 pending documents; `--retry-failed` rechecked those 5 and confirmed they still cannot be extracted. These failures require OCR. Of the 100 downloaded circular PDFs, 57 have no extractable text layer and are not in the parsed corpus.
+- No provider tokens or cost were incurred by extraction because all parseable documents were already processed and the remaining five have no text. The live filtered endpoint check remains pending deployment of D09.
+- Local verification: `uv run poe test` -> 111 passed; Ruff check and format checks pass.

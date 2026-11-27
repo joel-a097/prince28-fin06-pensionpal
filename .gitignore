@@ -20,6 +20,8 @@ data/raw/
 
 # uv cache for this restricted workspace.
 .uv-cache/
+eval/cache/
+.test-tmp/
 
 # Editor
 .vscode/
