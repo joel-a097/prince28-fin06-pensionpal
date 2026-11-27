@@ -6,11 +6,11 @@ This report is generated from the database by `uv run python scripts/ingest_repo
 | Measure | Value |
 |---|---:|
 | Documents | 116 |
-| Pages | 1,155 |
-| Text characters | 1,790,387 |
-| Estimated tokens (characters / 4) | 447,596 |
+| Pages | 1,188 |
+| Text characters | 2,043,857 |
+| Estimated tokens (characters / 4) | 510,964 |
 | Recorded extraction tokens | 232,842 |
-| Dead-letter items | 21 |
+| Dead-letter items | 18 |
 <!-- ingest-report:end -->
 
 ## What I learnt
