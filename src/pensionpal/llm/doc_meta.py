@@ -25,16 +25,15 @@ Kind = Literal[
 class DocMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    doc_kind: Kind
-    year: int | None = Field(default=None, ge=1950, le=2027)
-    language: Literal["en", "ta", "hi", "other"]
-    summary: str = Field(min_length=20, max_length=300)
-    topics: Annotated[list[Short], Field(min_length=1, max_length=6)]
-    schemes: Values
-    forms: Values
-    section_refs: Values
+    doc_type: Kind
+    number: str | None = Field(default=None, max_length=80)
+    date: str | None = Field(default=None, max_length=80)
+    topic: Annotated[list[Short], Field(min_length=1, max_length=6)]
+    condition: Values
+    form: Values
+    effective_from: str | None = Field(default=None, max_length=80)
 
-    @field_validator("topics")
+    @field_validator("topic", "condition", "form")
     @classmethod
-    def _tidy_topics(cls, value: list[str]) -> list[str]:
+    def _tidy_values(cls, value: list[str]) -> list[str]:
         return list(dict.fromkeys(topic.lower() for topic in value))

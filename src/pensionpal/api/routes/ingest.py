@@ -21,7 +21,10 @@ from pensionpal.api.deps import (
     QueueDep,
     require_admin,
 )
-from pensionpal.ingest.indexing import IndexContentChanged, index_document
+from pensionpal.ingest.local_indexing import (
+    LocalIndexContentChanged,
+    index_local_document,
+)
 from pensionpal.ingest.parse import ParsedDoc, ParsedPage
 from pensionpal.llm.embeddings import EmbeddingError
 from pensionpal.workers.ingest import plan
@@ -177,13 +180,13 @@ async def upload_local_document(
         )
     if embedder.configured:
         try:
-            chunks, _ = await index_document(
+            chunks, _ = await index_local_document(
                 request.app.state.session_factory,
                 embedder,
                 str(result["document_id"]),
                 request.app.state.settings,
             )
-        except (EmbeddingError, IndexContentChanged) as error:
+        except (EmbeddingError, LocalIndexContentChanged) as error:
             raise HTTPException(
                 status_code=503, detail="Document indexing failed; retry the upload."
             ) from error
@@ -193,7 +196,7 @@ async def upload_local_document(
     return result
 
 
-@router.get("/dead-letter")
+@router.get("/dead-letter", dependencies=[Depends(require_admin)])
 async def dead_letter(
     repo: IngestRepoDep, limit: Annotated[int, Query(ge=1, le=200)] = 50
 ) -> dict:
@@ -201,7 +204,7 @@ async def dead_letter(
     return {"count": len(items), "items": items}
 
 
-@router.get("/{job_id}")
+@router.get("/{job_id}", dependencies=[Depends(require_admin)])
 async def progress(job_id: str, repo: IngestRepoDep) -> dict:
     found = await repo.progress(job_id)
     if found is None:

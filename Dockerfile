@@ -12,6 +12,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-dev
 
+# Keep model initialization out of the first production request.
+RUN uv run --no-sync python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2', cache_dir='/opt/fastembed', lazy_load=True)"
+
 # 2) Your code. Changes often, so it comes last.
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -29,13 +32,14 @@ WORKDIR /app
 
 # Only what the app needs at runtime: the venv, migrations, scripts and seed data.
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /opt/fastembed /opt/fastembed
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app migrations ./migrations
 COPY --chown=app:app scripts ./scripts
 COPY --chown=app:app data ./data
 COPY --chown=app:app prompts ./prompts
 
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 GIT_SHA=${GIT_SHA}
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 GIT_SHA=${GIT_SHA} LOCAL_EMBEDDING_CACHE_DIR=/opt/fastembed
 USER app
 EXPOSE 8000
 
