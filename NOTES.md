@@ -251,7 +251,7 @@ Smoke test passed
 - After recovery: done 15 + skipped 1 + failed 4 = 20; no items remained queued or running.
 - Corpus documents after the run: 116; distinct external IDs: 116.
 - The interrupted work returned over about 6 minutes in this debugging run. The first replacement worker was stopped while OCR was still active; the final recovery needed a longer local timeout and startup recovery for stale `running` rows.
-- No row was duplicated: the worker atomically claims an item, and checks document content hashes before parsing and saving.
+- No row was duplicated: the worker atomically claims items, and PostgreSQL advisory locks serialize the final content-hash check and save.
 
 ### Dead-letter list
 
@@ -270,8 +270,8 @@ Smoke test passed
 
 ### Week 2 against Monday's estimate
 
-- `docs/CAPACITY.md` target: 2,000 pages and 763,020 estimated tokens. `docs/INGEST_REPORT.md` currently reports 1,188 pages and 510,964 estimated tokens.
-- Difference: 812 pages and 252,056 estimated tokens below the full-target estimate. This run has 116 documents; the target is an estimate, not a corpus-completion count.
+- `docs/CAPACITY.md` target: 2,000 pages and 763,020 estimated tokens. The original run's report showed 1,188 pages and 510,964 estimated tokens.
+- Difference at the time of the original run: 812 pages and 252,056 estimated tokens below the full-target estimate. That run had 116 documents; the target is an estimate, not a corpus-completion count.
 
 ### One thing that went wrong today, and how I fixed it
 

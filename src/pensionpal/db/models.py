@@ -123,6 +123,36 @@ class DocumentChunk(Base):
     document: Mapped[Document] = relationship()
 
 
+class LocalDocumentChunk(Base):
+    __tablename__ = "document_chunks_local"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer)
+    page_no: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    headings: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
+    content_hash: Mapped[str] = mapped_column(String(64))
+    embedding_model: Mapped[str] = mapped_column(String(120))
+    embedding: Mapped[list[float]] = mapped_column(Vector(384))
+
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "chunk_index", name="uq_local_document_chunks_document_chunk"
+        ),
+        Index(
+            "ix_document_chunks_local_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    document: Mapped[Document] = relationship()
+
+
 class ParseFailure(Base):
     """Dead-letter table for raw files the parser could not process."""
 

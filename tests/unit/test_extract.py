@@ -10,24 +10,23 @@ from pensionpal.llm.gateway import FakeLLM, LLMGateway
 
 def valid_record(**changes):
     record = {
-        "doc_kind": "rule",
-        "year": 1952,
-        "language": "en",
-        "summary": "The document explains rules for provident fund membership.",
-        "topics": ["EPF", "membership"],
-        "schemes": ["EPF Scheme"],
-        "forms": [],
-        "section_refs": ["Paragraph 1"],
+        "doc_type": "rule",
+        "number": "EPS-1952",
+        "date": "1952-11-16",
+        "topic": ["EPF", "membership"],
+        "condition": ["At least 10 years of service"],
+        "form": ["Form 10C"],
+        "effective_from": "1952-11-16",
     }
     return {**record, **changes}
 
 
 def test_doc_meta_is_a_strict_contract():
-    assert DocMeta.model_validate(valid_record()).doc_kind == "rule"
+    assert DocMeta.model_validate(valid_record()).doc_type == "rule"
     with pytest.raises(ValidationError):
         DocMeta.model_validate(valid_record(extra_field="unexpected"))
     with pytest.raises(ValidationError):
-        DocMeta.model_validate(valid_record(doc_kind="made_up"))
+        DocMeta.model_validate(valid_record(doc_type="made_up"))
 
 
 def test_parse_json_accepts_fences_but_requires_object():

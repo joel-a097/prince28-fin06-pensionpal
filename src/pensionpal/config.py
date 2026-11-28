@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
     embedding_model: str = "gemini-embedding-001"
     embedding_batch_size: int = 32
+    local_embedding_model: str = (
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    local_embedding_cache_dir: Path = Path.home() / ".cache" / "pensionpal-fastembed"
+    local_embedding_threads: int = 2
+    local_embedding_token_limit: int = 120
     chunk_max_chars: int = 2000
     chunk_overlap_chars: int = 200
     retrieval_limit: int = 5

@@ -18,7 +18,7 @@ from sqlalchemy import and_, func, or_, select, update
 
 from pensionpal.db.models import Document, IngestItem
 from pensionpal.ingest.fetch import RETRYABLE, HostGate, Robots, Source, fetch_one
-from pensionpal.ingest.indexing import index_document
+from pensionpal.ingest.local_indexing import index_local_document
 from pensionpal.ingest.parse import (
     ParseError,
     parse_file,
@@ -213,7 +213,7 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
 
     embedder = ctx.get("embedder")
     if embedder is not None and embedder.configured:
-        await index_document(
+        await index_local_document(
             ctx["sessionmaker"],
             embedder,
             document_external_id,
@@ -221,7 +221,7 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
         )
     elif embedder is not None:
         logger.warning(
-            "document %s saved without retrieval indexing: GEMINI_API_KEY is unset",
+            "document %s saved without local retrieval indexing",
             document_external_id,
         )
 
