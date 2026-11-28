@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: app  # pragma: allowlist secret
       POSTGRES_DB: app
     ports:
-      - "5433:5432"  # 5433 on your laptop, so it never clashes with another Postgres
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
@@ -37,13 +37,22 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql://app:app@db:5432/app  # pragma: allowlist secret
       REDIS_URL: redis://redis:6379
+      MANIFEST_FILE: ${MANIFEST_FILE:-data/manifest.jsonl}
+      WORKER_IN_API: ${WORKER_IN_API:-false}
+      INGEST_CONCURRENCY: ${INGEST_CONCURRENCY:-2}
+      INGEST_RPM: ${INGEST_RPM:-12}
+      INGEST_JOB_TIMEOUT: ${INGEST_JOB_TIMEOUT:-60}
+      INGEST_MAX_TRIES: ${INGEST_MAX_TRIES:-3}
+      INGEST_EXTRACT_ENABLED: ${INGEST_EXTRACT_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy
 
   api:
     build: .
-    environment: *app-env
+    environment:
+      <<: *app-env
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     env_file: &keys
       - path: .env
         required: false

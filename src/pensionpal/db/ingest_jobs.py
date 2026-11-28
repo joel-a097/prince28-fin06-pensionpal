@@ -1,6 +1,5 @@
 """Database operations for durable ingestion jobs and dead letters."""
 
-import hashlib
 from collections import Counter
 from uuid import uuid4
 
@@ -16,7 +15,7 @@ from pensionpal.db.models import (
     ParseFailure,
 )
 from pensionpal.ingest.parse import ParsedDoc
-from pensionpal.ingest.store import external_id, save_parsed
+from pensionpal.ingest.store import external_id, lock_document_keys, save_parsed
 
 
 class IngestRepository:
@@ -51,14 +50,9 @@ class IngestRepository:
         path = record["path"]
         digest = record["sha256"]
         identity = external_id(path)
-        lock_names = sorted((f"path:{identity}", f"sha:{digest}"))
         async with self.session.begin():
             # Serialize identical API uploads so a client retry cannot race itself.
-            for name in lock_names:
-                key = int.from_bytes(
-                    hashlib.sha256(name.encode()).digest()[:8], "big", signed=True
-                )
-                await self.session.execute(select(func.pg_advisory_xact_lock(key)))
+            await lock_document_keys(self.session, f"path:{identity}", f"sha:{digest}")
 
             existing_path = await self.session.scalar(
                 select(Document)

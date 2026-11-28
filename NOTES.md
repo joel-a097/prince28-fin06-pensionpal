@@ -251,7 +251,7 @@ Smoke test passed
 - After recovery: done 15 + skipped 1 + failed 4 = 20; no items remained queued or running.
 - Corpus documents after the run: 116; distinct external IDs: 116.
 - The interrupted work returned over about 6 minutes in this debugging run. The first replacement worker was stopped while OCR was still active; the final recovery needed a longer local timeout and startup recovery for stale `running` rows.
-- No row was duplicated: the worker atomically claims an item, and checks document content hashes before parsing and saving.
+- No row was duplicated: the worker atomically claims items, and PostgreSQL advisory locks serialize the final content-hash check and save.
 
 ### Dead-letter list
 
@@ -270,8 +270,8 @@ Smoke test passed
 
 ### Week 2 against Monday's estimate
 
-- `docs/CAPACITY.md` target: 2,000 pages and 763,020 estimated tokens. `docs/INGEST_REPORT.md` currently reports 1,188 pages and 510,964 estimated tokens.
-- Difference: 812 pages and 252,056 estimated tokens below the full-target estimate. This run has 116 documents; the target is an estimate, not a corpus-completion count.
+- `docs/CAPACITY.md` target: 2,000 pages and 763,020 estimated tokens. The original run's report showed 1,188 pages and 510,964 estimated tokens.
+- Difference at the time of the original run: 812 pages and 252,056 estimated tokens below the full-target estimate. That run had 116 documents; the target is an estimate, not a corpus-completion count.
 
 ### One thing that went wrong today, and how I fixed it
 
@@ -282,3 +282,28 @@ The first recovery left stale `running` items waiting because startup only put `
 - Postgres is the durable record of each item's state; Redis only carries the work notification.
 - A worker restart must reclaim stale `running` rows as well as restore queued rows.
 - OCR duration varies substantially by PDF, so the worker lease must exceed the largest expected parse time.
+
+### Verification on 2026-11-27
+
+- `uv run poe test`: 144 passed. `uv run poe lint`: Ruff checks and formatting passed.
+- `uv run poe test-integration` could not run because the local Postgres test endpoint rejected the configured `app` credentials. Docker Desktop's Linux engine was unavailable, so no database container was started and no local kill test was run in this verification.
+- Read-only Neon inspection reported Alembic revision `f31a9d8c0b27`; `ingest_jobs`, `ingest_items`, `documents`, and `pages` are present. No migration was run.
+- `uv run python scripts/ingest_report.py` generated the report from the configured database: 127 documents, 1,230 pages, 2,100,057 text characters, 525,014 estimated tokens, and 25 dead-letter items.
+- The public Render `/health` endpoint returned HTTP 200 and version `ba9552d661b37fe9ffab161a865cde5c246476e0`. No production ingestion was started.
+
+### Final isolated local validation
+
+- The earlier integration-test limitation above was resolved by running the suite against the isolated Compose database on host port 5434: `uv run poe test-integration` -> 20 passed. An initial invocation without `TEST_DATABASE_URL` targeted the unrelated service on port 5433 and failed authentication; it did not alter the Compose database.
+- `uv run poe test` -> 144 passed. `uv run poe lint` -> Ruff checks and formatting passed. `uv lock --check` and `git diff --check` passed.
+- Isolated local 10-item ingestion job `a1ebea39eb0f441b9219b4e3813d726a`: 10 done, 0 failed, 429 pages.
+- Isolated local 20-item kill/recovery job `86432134ca2540ea8652c79cdbaf408d`: after hard-killing the worker and restarting it, 18 done + 2 skipped + 0 failed = 20; no queued or running items remained; 99 pages were processed. The running lease was aged only in this isolated test database to exercise recovery promptly.
+- The isolated database contained 50 documents with 50 distinct SHA-256 hashes after both jobs. The 2 skipped items were idempotent duplicates; there were no duplicate stored hashes.
+- The Compose API, worker, Redis, and Postgres services were stopped after verification without deleting the local data volume. The report above remains generated from the configured Neon database, not the local test database.
+- At completion of the local validation, no production migration, ingestion, deployment, push, commit, or tag update had been performed.
+
+### Approved current-Render ingestion check
+
+- The current Render deployment (`ba9552d661b37fe9ffab161a865cde5c246476e0`) was reachable. An approved request for up to five records queued three eligible records.
+- Job `d69f5939754c449dbe8563e31145a619` finished with 3 failed, 0 done, 0 skipped, and 0 pages. Each source download returned HTTP 403 after one attempt. No attempt was made to bypass the source restriction.
+- The database-backed report was regenerated after this job: 127 documents, 1,230 pages, and 28 dead-letter items. The production database schema was not migrated.
+- The updated local worktree remains uncommitted, so no push or deployment of these local changes occurred.

@@ -18,14 +18,14 @@ from sqlalchemy import and_, func, or_, select, update
 
 from pensionpal.db.models import Document, IngestItem
 from pensionpal.ingest.fetch import RETRYABLE, HostGate, Robots, Source, fetch_one
-from pensionpal.ingest.indexing import index_document
+from pensionpal.ingest.local_indexing import index_local_document
 from pensionpal.ingest.parse import (
     ParseError,
     parse_file,
     parse_pdf_ocr,
     parse_pdf_pypdf,
 )
-from pensionpal.ingest.store import save_failure, save_parsed
+from pensionpal.ingest.store import lock_document_keys, save_failure, save_parsed
 from pensionpal.llm.extract import document_text, extract, save
 
 logger = logging.getLogger("pensionpal.worker")
@@ -184,15 +184,22 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
                     )
                 raise Permanent(f"parse: {error.reason}") from error
             async with ctx["sessionmaker"]() as session, session.begin():
-                await save_parsed(
-                    session,
-                    path=record["path"],
-                    sha256=digest,
-                    source_url=record.get("final_url") or record.get("url"),
-                    licence=record.get("licence"),
-                    source_title=record.get("title"),
-                    parsed=parsed,
+                await lock_document_keys(session, f"sha:{digest}")
+                current = await session.scalar(
+                    select(Document).where(Document.sha256 == digest).with_for_update()
                 )
+                if current is None:
+                    await save_parsed(
+                        session,
+                        path=record["path"],
+                        sha256=digest,
+                        source_url=record.get("final_url") or record.get("url"),
+                        licence=record.get("licence"),
+                        source_title=record.get("title"),
+                        parsed=parsed,
+                    )
+                else:
+                    status = "skipped"
         async with ctx["sessionmaker"]() as session:
             document = await session.scalar(
                 select(Document).where(Document.sha256 == digest)
@@ -206,7 +213,7 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
 
     embedder = ctx.get("embedder")
     if embedder is not None and embedder.configured:
-        await index_document(
+        await index_local_document(
             ctx["sessionmaker"],
             embedder,
             document_external_id,
@@ -214,7 +221,7 @@ async def process(ctx: dict, item_id: int) -> tuple[str, int]:
         )
     elif embedder is not None:
         logger.warning(
-            "document %s saved without retrieval indexing: GEMINI_API_KEY is unset",
+            "document %s saved without local retrieval indexing",
             document_external_id,
         )
 

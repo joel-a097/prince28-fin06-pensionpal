@@ -1,6 +1,8 @@
+import asyncio
+
 from fastapi.testclient import TestClient
 
-from pensionpal.api.deps import get_ingest_repo, get_manifest, get_queue
+from pensionpal.api.deps import get_embedder, get_ingest_repo, get_manifest, get_queue
 from pensionpal.api.main import create_app
 from pensionpal.config import Settings
 
@@ -69,6 +71,10 @@ class FakeQueue:
         self.ids.extend(ids)
 
 
+class FakeDisabledEmbedder:
+    configured = False
+
+
 def make_client(*, token="secret", empty=False, redis_down=False):
     settings = Settings(
         app_env="ci",
@@ -79,6 +85,7 @@ def make_client(*, token="secret", empty=False, redis_down=False):
     app = create_app(settings)
     repo, queue = FakeIngestRepo(empty), FakeQueue(redis_down)
     app.dependency_overrides[get_ingest_repo] = lambda: repo
+    app.dependency_overrides[get_embedder] = lambda: FakeDisabledEmbedder()
     app.dependency_overrides[get_queue] = lambda: queue
     app.dependency_overrides[get_manifest] = lambda: [
         {
@@ -105,8 +112,64 @@ def test_ingest_is_disabled_without_configured_token():
             client.post(
                 "/v1/ingest", json={}, headers={"X-Admin-Token": "anything"}
             ).status_code
-            == 403
+            == 401
         )
+
+
+def test_ingest_rejects_invalid_token():
+    client, _, _ = make_client()
+    with client:
+        response = client.post(
+            "/v1/ingest", json={}, headers={"X-Admin-Token": "wrong"}
+        )
+    assert response.status_code == 401
+
+
+def test_worker_in_api_uses_configured_redis_url(monkeypatch):
+    observed = {}
+
+    class FakeEngine:
+        async def dispose(self):
+            pass
+
+    class FakeResource:
+        async def aclose(self):
+            pass
+
+    class FakeWorker:
+        def __init__(self, **kwargs):
+            observed.update(kwargs)
+
+        async def async_run(self):
+            await asyncio.Future()
+
+    monkeypatch.setattr("pensionpal.api.main.make_engine", lambda _: FakeEngine())
+    monkeypatch.setattr("pensionpal.api.main.make_sessionmaker", lambda _: object())
+    monkeypatch.setattr(
+        "pensionpal.api.main.build_gateway", lambda *_args, **_kwargs: FakeResource()
+    )
+    monkeypatch.setattr(
+        "pensionpal.api.main.LocalFastEmbedder", lambda **_kwargs: FakeResource()
+    )
+    monkeypatch.setattr(
+        "pensionpal.api.main.LocalDocumentRetriever",
+        lambda *_args, **_kwargs: object(),
+    )
+    monkeypatch.setattr("arq.worker.Worker", FakeWorker)
+    settings = Settings(
+        app_env="ci",
+        database_url="postgresql://localhost/unused",
+        redis_url="redis://configured.example:6381/4",
+        worker_in_api=True,
+        _env_file=None,
+    )
+
+    with TestClient(create_app(settings)):
+        pass
+
+    assert observed["redis_settings"].host == "configured.example"
+    assert observed["redis_settings"].port == 6381
+    assert observed["redis_settings"].database == 4
 
 
 def test_ingest_queues_and_returns_202():
@@ -157,16 +220,16 @@ def test_redis_failure_returns_503_and_leaves_durable_job():
 def test_progress_and_missing_job():
     client, _, _ = make_client()
     with client:
-        assert client.get("/v1/ingest/job123").status_code == 200
-        assert client.get("/v1/ingest/missing").status_code == 404
+        headers = {"X-Admin-Token": "secret"}
+        assert client.get("/v1/ingest/job123", headers=headers).status_code == 200
+        assert client.get("/v1/ingest/missing", headers=headers).status_code == 404
 
 
-def test_dead_letter_is_readable_without_admin_token():
+def test_dead_letter_requires_admin_token():
     client, _, _ = make_client()
     with client:
         response = client.get("/v1/ingest/dead-letter")
-    assert response.status_code == 200
-    assert response.json()["count"] == 1
+    assert response.status_code == 401
 
 
 def test_ingest_limit_validation():
@@ -232,6 +295,7 @@ def test_local_document_upload_uses_production_page_store():
         )
     assert response.status_code == 200
     assert response.json()["status"] == "inserted"
+    assert response.json()["index_status"] == "pending"
     assert len(repo.uploaded) == 1
     assert repo.uploaded[0][1].pages[0].text == "Circular text"
 

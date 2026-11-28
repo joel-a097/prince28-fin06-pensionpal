@@ -12,6 +12,9 @@ tests
 .coverage
 htmlcov
 .pytest_cache
+.pytest-tmp*
+.test-tmp
+.uv-cache
 
 # Local environment (secrets must never enter the image)
 .env

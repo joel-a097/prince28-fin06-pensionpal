@@ -63,6 +63,9 @@ sample data once, then starts the API.
 Stop with `Ctrl+C`, then `docker compose down`. Add `-v` to also delete the
 database volume.
 
+For Windows PowerShell queue, worker, and crash-recovery commands, see
+[docs/QUEUE_WORKER.md](docs/QUEUE_WORKER.md).
+
 ## Develop and test
 
 | Task | Mac / Linux | Windows |

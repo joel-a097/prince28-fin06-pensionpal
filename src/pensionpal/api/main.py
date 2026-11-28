@@ -3,6 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
@@ -15,9 +16,9 @@ from pensionpal.api.routes.ingest import router as ingest_router
 from pensionpal.config import Settings, get_settings
 from pensionpal.db.llm_calls import make_recorder
 from pensionpal.db.session import make_engine, make_sessionmaker
-from pensionpal.llm.embeddings import GeminiEmbedder
 from pensionpal.llm.gateway import build_gateway
-from pensionpal.services.retrieval import DocumentRetriever
+from pensionpal.llm.local_embeddings import LocalFastEmbedder
+from pensionpal.services.retrieval import LocalDocumentRetriever
 from pensionpal.workers.queue import IngestQueue
 
 
@@ -35,12 +36,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.gateway = build_gateway(
             cfg, recorder=make_recorder(app.state.session_factory)
         )
-        app.state.embedder = GeminiEmbedder(
-            cfg.gemini_api_key,
-            model=cfg.embedding_model,
-            batch_size=cfg.embedding_batch_size,
+        app.state.embedder = LocalFastEmbedder(
+            model=cfg.local_embedding_model,
+            cache_dir=cfg.local_embedding_cache_dir,
+            threads=cfg.local_embedding_threads,
         )
-        app.state.retriever = DocumentRetriever(
+        app.state.retriever = LocalDocumentRetriever(
             app.state.session_factory,
             app.state.embedder,
             limit=cfg.retrieval_limit,
@@ -55,7 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
             worker = Worker(
                 functions=WorkerSettings.functions,
-                redis_settings=WorkerSettings.redis_settings,
+                redis_settings=RedisSettings.from_dsn(cfg.redis_url),
                 queue_name=WorkerSettings.queue_name,
                 max_jobs=cfg.ingest_concurrency,
                 job_timeout=cfg.ingest_job_timeout,

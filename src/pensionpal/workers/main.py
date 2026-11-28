@@ -17,8 +17,8 @@ from pensionpal.db.models import IngestItem
 from pensionpal.db.session import make_engine, make_sessionmaker
 from pensionpal.ingest.fetch import make_client
 from pensionpal.llm.doc_meta import DocMeta
-from pensionpal.llm.embeddings import GeminiEmbedder
 from pensionpal.llm.gateway import build_gateway
+from pensionpal.llm.local_embeddings import LocalFastEmbedder
 from pensionpal.llm.prompts import latest
 from pensionpal.workers.ingest import Pace, PacedGateway, ingest_document
 
@@ -43,10 +43,10 @@ async def startup(ctx: dict) -> None:
     ctx["http"] = make_worker_http_client(cfg.ingest_concurrency)
     ctx["pace"] = Pace(cfg.ingest_rpm)
     ctx["gateway"] = build_gateway(cfg, recorder=make_recorder(ctx["sessionmaker"]))
-    ctx["embedder"] = GeminiEmbedder(
-        cfg.gemini_api_key,
-        model=cfg.embedding_model,
-        batch_size=cfg.embedding_batch_size,
+    ctx["embedder"] = LocalFastEmbedder(
+        model=cfg.local_embedding_model,
+        cache_dir=cfg.local_embedding_cache_dir,
+        threads=cfg.local_embedding_threads,
     )
     ctx["paced_gateway"] = PacedGateway(ctx["gateway"], ctx["pace"])
     ctx["extract"] = None
